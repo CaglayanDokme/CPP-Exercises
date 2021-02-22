@@ -46,5 +46,14 @@ int main(int argc, char const *argv[]) {
     Function(v1, lambdaFuncCapture);
     cout << endl;
 
+    /** Lambda Expression Object with Return Type **/
+    auto lambdaFuncRetType =    [limit]                         /* Capture list is empty    */
+                                (int value)                     /* Function-like parameters */
+                                -> bool                         /* Return type added        */
+                                { return (value > limit); };    /* Function body            */
+    cout << "Printing values using lambda expression with explicit return type : " << endl;
+    Function(v1, lambdaFuncRetType);
+    cout << endl;
+
     return 0;
 }

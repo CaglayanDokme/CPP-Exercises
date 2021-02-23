@@ -1,10 +1,12 @@
 // Description: Function examples with lambda expressions as input parameters
-// Date:        February 20, 2021
 // Author:      Caglayan DOKME
+// Date:        February 20, 2021 -> First release
+//              February 23, 2021 -> std::function example added.
 
 #include <iostream>
 #include <vector>
 #include <iterator>
+#include <functional>
 
 using namespace std;
 
@@ -53,6 +55,20 @@ int main(int argc, char const *argv[]) {
                                 { return (value > limit); };    /* Function body            */
     cout << "Printing values using lambda expression with explicit return type : " << endl;
     Function(v1, lambdaFuncRetType);
+    cout << endl;
+
+    /** STD::FUNCTION with Lambda Expression **/
+    // Do not forget to include the standard library <functional>
+    // Example syntax: std::function</* Signature of Function */>
+    // Signature of a function includes its return type and input parameters
+    function<bool(int)> stdFuncLabmda = [limit]                         /* Capture list is empty    */
+                                        (int value)                     /* Function-like parameters */
+                                        -> bool                         /* Return type added        */
+                                        { return (value > limit); };    /* Function body            */
+
+
+    cout << "Printing values using lambda expression of type std::function : " << endl;
+    Function(v1, stdFuncLabmda);
     cout << endl;
 
     return 0;

@@ -40,7 +40,7 @@ int main(int argc, char const *argv[]) {
 
     /** Lambda Expression Object with Capture List **/
     const int limit = 3;
-    auto lambdaFuncCapture =    [limit]                         /* Capture list is empty    */
+    auto lambdaFuncCapture =    [limit]                         /* Capture list             */
                                 (int value)                     /* Function-like parameters */
                                 { return (value > limit); };    /* Function body            */
     cout << "Printing values(>limit(" << limit
@@ -49,7 +49,7 @@ int main(int argc, char const *argv[]) {
     cout << endl;
 
     /** Lambda Expression Object with Return Type **/
-    auto lambdaFuncRetType =    [limit]                         /* Capture list is empty    */
+    auto lambdaFuncRetType =    [limit]                         /* Capture list             */
                                 (int value)                     /* Function-like parameters */
                                 -> bool                         /* Return type added        */
                                 { return (value > limit); };    /* Function body            */
@@ -61,7 +61,7 @@ int main(int argc, char const *argv[]) {
     // Do not forget to include the standard library <functional>
     // Example syntax: std::function</* Signature of Function */>
     // Signature of a function includes its return type and input parameters
-    function<bool(int)> stdFuncLabmda = [limit]                         /* Capture list is empty    */
+    function<bool(int)> stdFuncLabmda = [limit]                         /* Capture list             */
                                         (int value)                     /* Function-like parameters */
                                         -> bool                         /* Return type added        */
                                         { return (value > limit); };    /* Function body            */

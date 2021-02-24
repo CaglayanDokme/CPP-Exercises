@@ -1,4 +1,4 @@
-/* Description :    A template container class with aray data structure.
+/* Description :    A template container class with array data structure.
  *                  Provides copy construction, array-copy features.
  *                  Provides array comparison.
  *                  Provides informative exception messages.
@@ -8,6 +8,7 @@
  *                                       Copy and move constructor added.
  *                                       Construction with traditional array added.
  *                                       Stream insertion operators overloaded.
+ *                                       Initializer list constr added.
  */
 
 #include <iostream>
@@ -21,6 +22,7 @@ public:
     Array(const Array<T>& copyArr);         // Copy constructor
     Array(Array<T>&& moveArr);              // Move constructor
     Array(const T* const source, const size_t size);    // Construct via traditional array
+    Array(std::initializer_list<T> initializerList);
 
     virtual ~Array(); // DTor defined virtual to support efficient polymorphism
 
@@ -34,8 +36,7 @@ public:
 
     /* Declaring a function as a friend inside of a template class
        corrupts its usage. You may want to check the holy StackOverflow :)
-       stackoverflow.com/questions/4660123
-       */
+       stackoverflow.com/questions/4660123 */
     template<class _T>
     friend std::ostream& operator<<(std::ostream& stream, const Array<_T>& array);
 
@@ -75,10 +76,10 @@ template<class T>
 Array<T>::Array(Array<T>&& moveArr)
 : size(moveArr.getSize()), container(moveArr.container)
 {
-    /* No need to make an element wised copy as the
-       source is a constant array. Assigning nullptr
-       to moveArr's container prevents destroying its
-       content as we used it to construct the new one.*/
+    /* No need to make an element wised copy as the source is
+       a constant array. Assigning nullptr to moveArr's container
+       prevents destroying its content as we used its resources
+       to construct the new one.*/
     moveArr.container = nullptr;
 }
 
@@ -86,10 +87,21 @@ template<class T>
 Array<T>::Array(const T* const source, const size_t size)
 : size(size), container(nullptr)
 {
-    container = new T[size];
+    container = new T[size];    // Allocate space to copy elements
 
     for(size_t index = 0; index < size; index++)    // Element wise copy
         (*this)[index] = source[index];
+}
+
+template<class T>
+Array<T>::Array(std::initializer_list<T> initializerList)
+: size(initializerList.size()), container(nullptr)
+{
+    container = new T[size];    // Allocate space to copy elements
+
+    size_t index = 0;   // Element wise copy
+    for(const T& element : initializerList)
+        container[index++] = element;
 }
 
 template<class T>

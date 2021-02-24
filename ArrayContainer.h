@@ -1,8 +1,10 @@
 // Description :    A template container class with aray data structure.
 //                  Provides copy construction, array-copy features.
+//                  Provides array comparison.
 //                  Provides informative exception messages.
 // Author :         Caglayan DOKME
 // Date :           February 23, 2021 -> First release
+//                  February 24, 2021 -> Array comparison added.
 
 #include <iostream>
 #include <exception>
@@ -16,6 +18,9 @@ public:
 
     T   operator[](const size_t index) const;   // Subscript operator for const objects returns rValue
     T&  operator[](const size_t index);         // Subscript operator for non-const objects returns lValue
+
+    bool operator==(const Array<T>& rightArr) const;    // Array comparison
+    bool operator!=(const Array<T>& rightArr) const;    // Array comparison by inequality
 
     size_t getSize(void) const
     { return (container == nullptr) ? 0 : size; }
@@ -73,4 +78,29 @@ T& Array<T>::operator[](const size_t index)
                 errorMessage += "(Size = "  + std::to_string(size)  + ") ";
                 errorMessage += "(Index = " + std::to_string(index) + ") ";
     throw std::range_error(errorMessage);
+}
+
+template<class T>
+bool Array<T>::operator==(const Array<T>& rightArr) const
+{
+    if(rightArr.size != size)           // Size should be the same to make a proper comparison
+        return false;
+
+    if(rightArr.container == nullptr)   // Empty arrays cannot be equal to anything
+        return false;
+
+    if(rightArr.container == container) // Self comparison
+        return true;
+
+    for(size_t index = 0; index < size; index++)    // Iterate on both arrays
+        if(container[index] != rightArr[index])     // operator== must have been overloaded for non-built-in types
+            return false;   // Return false in case of any little difference
+
+    return true;    // Arrays are the same
+}
+
+template<class T>
+bool Array<T>::operator!=(const Array<T>& right) const
+{   // Inequality operator returns the opposite of equality operator
+    return !(*this == right);   // Invokes Array::operator==
 }

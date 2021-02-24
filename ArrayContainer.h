@@ -5,6 +5,8 @@
 // Author :         Caglayan DOKME
 // Date :           February 23, 2021 -> First release
 //                  February 24, 2021 -> Array comparison added.
+//                                       Array assignment added.
+//                                       Copy constructor added.
 
 #include <iostream>
 #include <exception>
@@ -13,14 +15,17 @@
 template<class T>
 class Array{
 public:
-    Array(const size_t arraySize);  // Construct by size
-    virtual ~Array();               // DTor defined virtual to provide efficient polymorphism
+    Array(const size_t arraySize);      // Construct by size
+    Array(const Array<T>& rightArr);    // Copy constructor
+    virtual ~Array();                   // DTor defined virtual to supoort efficient polymorphism
 
     T   operator[](const size_t index) const;   // Subscript operator for const objects returns rValue
     T&  operator[](const size_t index);         // Subscript operator for non-const objects returns lValue
 
     bool operator==(const Array<T>& rightArr) const;    // Array comparison
     bool operator!=(const Array<T>& rightArr) const;    // Array comparison by inequality
+
+    const Array<T>& operator=(const Array<T>& rightArr);    // Array assignment
 
     size_t getSize(void) const
     { return (container == nullptr) ? 0 : size; }
@@ -38,6 +43,17 @@ Array<T>::Array(size_t arraySize)
         throw std::logic_error("Array size cannot be zero!");
 
     container = new T[size];
+}
+
+template<class T>
+Array<T>::Array(const Array<T>& rightArr)
+: size(rightArr.getSize()), container(nullptr)
+{
+    container = new T[size];    // Allocate space to copy elements
+
+    // Element wise copy
+    for(size_t index = 0; index < rightArr.getSize(); index++)
+        (*this)[index] = rightArr[index];
 }
 
 template<class T>
@@ -93,7 +109,7 @@ bool Array<T>::operator==(const Array<T>& rightArr) const
         return true;
 
     for(size_t index = 0; index < size; index++)    // Iterate on both arrays
-        if(container[index] != rightArr[index])     // operator== must have been overloaded for non-built-in types
+        if((*this)[index] != rightArr[index])     // operator== must have been overloaded for non-built-in types
             return false;   // Return false in case of any little difference
 
     return true;    // Arrays are the same
@@ -103,4 +119,19 @@ template<class T>
 bool Array<T>::operator!=(const Array<T>& right) const
 {   // Inequality operator returns the opposite of equality operator
     return !(*this == right);   // Invokes Array::operator==
+}
+
+template<class T>
+const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
+{   // Return a const reference to support cascade assignments(e.g. arr = arr1 = arr2)
+    delete [] container;    // Destroy left array
+
+    container = new T[rightArr.getSize()];              // Allocate space for incoming elements
+    const_cast<size_t&>(size) = rightArr.getSize();     // Determine new array size
+
+    // Element wise copy
+    for(size_t index = 0; index < rightArr.getSize(); index++)
+        (*this)[index] = rightArr[index];
+
+    return *this;
 }

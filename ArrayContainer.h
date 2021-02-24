@@ -1,6 +1,5 @@
 /* Description :    A template container class with array data structure.
- *                  Provides copy construction, array-copy features.
- *                  Provides array comparison.
+ *                  Provides copy construction, array-copy features, array comparison etc.
  *                  Provides informative exception messages.
  * Author :         Caglayan DOKME, caglayandokme@gmail.com
  * Date :           February 23, 2021 -> First release
@@ -8,7 +7,8 @@
  *                                       Copy and move constructor added.
  *                                       Construction with traditional array added.
  *                                       Stream insertion operators overloaded.
- *                                       Initializer list constr added.
+ *                                       Initializer list constructor added.
+ *                                       Constructor exception mechanism enhanced.
  */
 
 #include <iostream>
@@ -65,6 +65,9 @@ template<class T>
 Array<T>::Array(const Array<T>& copyArr)
 : size(copyArr.getSize()), container(nullptr)
 {
+    if(size == 0)    // Create array only if the size is valid(positive)
+        throw std::logic_error("Array size cannot be zero!");
+
     container = new T[size];    // Allocate space to copy elements
 
     // Element wise copy
@@ -76,6 +79,9 @@ template<class T>
 Array<T>::Array(Array<T>&& moveArr)
 : size(moveArr.getSize()), container(moveArr.container)
 {
+    if(size == 0)    // Create array only if the size is valid(positive)
+        throw std::logic_error("Array size cannot be zero!");
+
     /* No need to make an element wised copy as the source is
        a constant array. Assigning nullptr to moveArr's container
        prevents destroying its content as we used its resources
@@ -87,6 +93,9 @@ template<class T>
 Array<T>::Array(const T* const source, const size_t size)
 : size(size), container(nullptr)
 {
+    if(size == 0)    // Create array only if the size is valid(positive)
+        throw std::logic_error("Array size cannot be zero!");
+
     container = new T[size];    // Allocate space to copy elements
 
     for(size_t index = 0; index < size; index++)    // Element wise copy
@@ -97,6 +106,9 @@ template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
 : size(initializerList.size()), container(nullptr)
 {
+    if(size == 0)    // Create array only if the size is valid(positive)
+        throw std::logic_error("Array size cannot be zero!");
+
     container = new T[size];    // Allocate space to copy elements
 
     size_t index = 0;   // Element wise copy

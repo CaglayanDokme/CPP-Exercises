@@ -1,12 +1,14 @@
-// Description :    A template container class with aray data structure.
-//                  Provides copy construction, array-copy features.
-//                  Provides array comparison.
-//                  Provides informative exception messages.
-// Author :         Caglayan DOKME
-// Date :           February 23, 2021 -> First release
-//                  February 24, 2021 -> Array comparison added.
-//                                       Array assignment added.
-//                                       Copy constructor added.
+/* Description :    A template container class with aray data structure.
+ *                  Provides copy construction, array-copy features.
+ *                  Provides array comparison.
+ *                  Provides informative exception messages.
+ * Author :         Caglayan DOKME, caglayandokme@gmail.com
+ * Date :           February 23, 2021 -> First release
+ *                  February 24, 2021 -> Array comparison and assignment added.
+ *                                       Copy and move constructor added.
+ *                                       Construction with traditional array added.
+ *                                       Stream insertion operators overloaded.
+ */
 
 #include <iostream>
 #include <exception>
@@ -15,9 +17,12 @@
 template<class T>
 class Array{
 public:
-    Array(const size_t arraySize);      // Construct by size
-    Array(const Array<T>& rightArr);    // Copy constructor
-    virtual ~Array();                   // DTor defined virtual to supoort efficient polymorphism
+    Array(const size_t arraySize);          // Construct by size
+    Array(const Array<T>& copyArr);         // Copy constructor
+    Array(Array<T>&& moveArr);              // Move constructor
+    Array(const T* const source, const size_t size);    // Construct via traditional array
+
+    virtual ~Array(); // DTor defined virtual to support efficient polymorphism
 
     T   operator[](const size_t index) const;   // Subscript operator for const objects returns rValue
     T&  operator[](const size_t index);         // Subscript operator for non-const objects returns lValue
@@ -26,6 +31,16 @@ public:
     bool operator!=(const Array<T>& rightArr) const;    // Array comparison by inequality
 
     const Array<T>& operator=(const Array<T>& rightArr);    // Array assignment
+
+    /* Declaring a function as a friend inside of a template class
+       corrupts its usage. You may want to check the holy StackOverflow :)
+       stackoverflow.com/questions/4660123
+       */
+    template<class _T>
+    friend std::ostream& operator<<(std::ostream& stream, const Array<_T>& array);
+
+    template<class _T>
+    friend std::istream& operator>>(std::istream& stream, Array<_T>& array);
 
     size_t getSize(void) const
     { return (container == nullptr) ? 0 : size; }
@@ -46,14 +61,35 @@ Array<T>::Array(size_t arraySize)
 }
 
 template<class T>
-Array<T>::Array(const Array<T>& rightArr)
-: size(rightArr.getSize()), container(nullptr)
+Array<T>::Array(const Array<T>& copyArr)
+: size(copyArr.getSize()), container(nullptr)
 {
     container = new T[size];    // Allocate space to copy elements
 
     // Element wise copy
-    for(size_t index = 0; index < rightArr.getSize(); index++)
-        (*this)[index] = rightArr[index];
+    for(size_t index = 0; index < copyArr.getSize(); index++)
+        (*this)[index] = copyArr[index];
+}
+
+template<class T>
+Array<T>::Array(Array<T>&& moveArr)
+: size(moveArr.getSize()), container(moveArr.container)
+{
+    /* No need to make an element wised copy as the
+       source is a constant array. Assigning nullptr
+       to moveArr's container prevents destroying its
+       content as we used it to construct the new one.*/
+    moveArr.container = nullptr;
+}
+
+template<class T>
+Array<T>::Array(const T* const source, const size_t size)
+: size(size), container(nullptr)
+{
+    container = new T[size];
+
+    for(size_t index = 0; index < size; index++)    // Element wise copy
+        (*this)[index] = source[index];
 }
 
 template<class T>
@@ -134,4 +170,34 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
         (*this)[index] = rightArr[index];
 
     return *this;
+}
+
+template<class T>
+std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
+{
+    /* Stream operators must be declared global as the
+       left objects of them will always be members of
+       type ostream or istream.*/
+    if(array.container == nullptr)
+        stream << "Array is empty!";
+
+    for(size_t index = 0; index < array.getSize(); index++)
+        stream << array[index] << " ";
+
+    return stream;  // Return reference to support cascade streaming
+}
+
+template<class T>
+std::istream& operator>>(std::istream& stream, Array<T>& array)
+{
+    /* Stream operators must be declared global as the
+       left objects of them will always be members of
+       type ostream or istream.*/
+    if(array.container == nullptr)
+        throw "Non-initialized array cannot get inputs!";
+
+    for(size_t index = 0; index < array.getSize(); index++)
+        stream >> array[index];
+
+    return stream;  // Return reference to support cascade streaming
 }

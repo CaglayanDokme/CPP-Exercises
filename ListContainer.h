@@ -1,7 +1,11 @@
-/** Description :    A template container class with an underlying
- *                   doubly linked list structure.
- *  Author :         Caglayan DOKME, caglayandokme@gmail.com
- *  Date :           February 25, 2021 -> First release
+/** @file       ListContainer.h
+ *  @details    A template container class with an underlying
+ *              doubly linked list structure.
+ *  @author     Caglayan DOKME, caglayandokme@gmail.com
+ *  @date       February 25, 2021 -> First release
+ *                                ->
+ *
+ *  @note       Feel free to contact for questions, bugs or any other thing.
  */
 
 #include <iostream>
@@ -21,9 +25,13 @@ public:
 
     const T& First() const; // Get the first data as an rValue
     const T& Last() const;  // Get the last data as an rValue
+    T& First(); // Get the first data as an lValue
+    T& Last();  // Get the first data as an lValue
 
     List<T>& RemoveFirst(); // Remove the first node
     List<T>& RemoveLast();  // Remove the last node
+    List<T>& EraseAll();    // Remove all elements
+    List<T>& RemoveIf(const T& data); // Remove all samples of a specific data
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -40,6 +48,9 @@ public:
     { return numberOfNodes; }
 
 private:
+    ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
+    void RemoveNode(ListNode<T>* removingNode);
+
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
     ListNode<T>* lastPtr    = nullptr;  // Last node of the list
     size_t numberOfNodes    = 0;        // Node count
@@ -132,6 +143,24 @@ const T& List<T>::Last() const
 }
 
 template<class T>
+T& List<T>::First()
+{
+    if(isEmpty() == true)
+        throw std::logic_error("List is empty!");
+
+    return firstPtr->data;
+}
+
+template<class T>
+T& List<T>::Last()
+{
+    if(isEmpty() == true)
+        throw std::logic_error("List is empty!");
+
+    return lastPtr->data;
+}
+
+template<class T>
 List<T>& List<T>::RemoveFirst()
 {
     if(isEmpty() == false)
@@ -155,7 +184,7 @@ List<T>& List<T>::RemoveLast()
     {
         ListNode<T>* tempPtr = lastPtr;     // Save removing node addresss
         lastPtr = lastPtr->prevPtr;         // Update lastPtr
-        delete tempPtr;                     // Delete saved firstPtr
+        delete tempPtr;                     // Delete saved lastPtr
         numberOfNodes--;                    // Decrement node count
 
         if(lastPtr != nullptr)
@@ -163,6 +192,33 @@ List<T>& List<T>::RemoveLast()
     }
 
     return *this;   // Support cascaded remove calls
+}
+
+template<class T>
+List<T>& List<T>::EraseAll()
+{
+    /* Remove all until the list is empty */
+    while(isEmpty() == false)
+        RemoveFirst();
+}
+
+template<class T>
+List<T>& List<T>::RemoveIf(const T& data)
+{
+    ListNode<T>* removingNode;      // Node to be removed
+    ListNode<T>* searchStartPoint;  // Node where the search will start
+
+    /* Find and remove all specified nodes until
+     * we hit the last of the list */
+    removingNode = Find(data, firstPtr);    // Find the first sample
+    while(removingNode != nullptr)
+    {
+        searchStartPoint = removingNode->nextPtr;       // Save the next node
+        RemoveNode(removingNode);                       // Remove the node found
+        removingNode = Find(data, searchStartPoint);    // Find the next removing node
+    }
+
+    return *this;
 }
 
 template<class T>
@@ -179,8 +235,45 @@ std::ostream& operator<<(std::ostream& stream, List<T>& list)
 template<class T>
 void List<T>::PrintAll(std::ostream& stream)
 {
-    ListNode<T>* currentNode = firstPtr;
-
-    for( ; currentNode != nullptr; currentNode = currentNode->nextPtr)
+    for(ListNode<T>* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
         stream << currentNode->data << " ";
+}
+
+template<class T>
+ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
+{
+    // Search begins by the given node
+    ListNode<T>* currentNode = beginByNode;
+
+    /* Break the search if the element is found
+     * or the last element is hit */
+    while(currentNode != nullptr)
+    {
+        if(currentNode->data == data)
+            break;
+        else
+            currentNode = currentNode->nextPtr;
+    }
+
+    return currentNode;
+}
+
+template<class T>
+void List<T>::RemoveNode(ListNode<T>* removingNode)
+{
+    if(removingNode == nullptr)         // Return if the node is not valids
+        return;
+    else if(removingNode == firstPtr)   // First and last pointers are special
+        RemoveFirst();                  // as there is no previous or next
+    else if(removingNode == lastPtr)    // pointers for nodes. This affects
+        RemoveLast();                   // the reconnection strategy.
+    else    // If it is a random node
+    {
+        // Connect previous and next nodes
+        removingNode->nextPtr->prevPtr = removingNode->prevPtr;
+        removingNode->prevPtr->nextPtr = removingNode->nextPtr;
+
+        delete removingNode;    // Delete the node
+        numberOfNodes--;        // Decrement node counter
+    }
 }

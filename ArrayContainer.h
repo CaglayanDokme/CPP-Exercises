@@ -1,14 +1,17 @@
-/* Description :    A template container class with array data structure.
- *                  Provides copy construction, array-copy features, array comparison etc.
- *                  Provides informative exception messages.
- * Author :         Caglayan DOKME, caglayandokme@gmail.com
- * Date :           February 23, 2021 -> First release
- *                  February 24, 2021 -> Array comparison and assignment added.
- *                                       Copy and move constructor added.
- *                                       Construction with traditional array added.
- *                                       Stream insertion operators overloaded.
- *                                       Initializer list constructor added.
- *                                       Constructor exception mechanism enhanced.
+/**
+ * @file       ArrayContainer.h
+ * @details    A template container class with array data structure.
+ *             Provides copy construction, array-copy features, array comparison etc.
+ *             Provides informative exception messages.
+ * @author     Caglayan DOKME, caglayandokme@gmail.com
+ * @date       February 23, 2021 -> First release
+ *             February 24, 2021 -> Array comparison and assignment added.
+ *                                  Copy and move constructor added.
+ *                                  Construction with traditional array added.
+ *                                  Stream insertion operators overloaded.
+ *                                  Initializer list constructor added.
+ *                                  Constructor exception mechanism enhanced.
+ *             February 25, 2021 -> File documented with doxygen.
  */
 
 #include <iostream>
@@ -24,10 +27,10 @@ public:
     Array(const T* const source, const size_t size);    // Construct via traditional array
     Array(std::initializer_list<T> initializerList);
 
-    virtual ~Array(); // DTor defined virtual to support efficient polymorphism
+    virtual ~Array(); // Destructor defined virtual to support efficient polymorphism
 
-    T   operator[](const size_t index) const;   // Subscript operator for const objects returns rValue
-    T&  operator[](const size_t index);         // Subscript operator for non-const objects returns lValue
+    const T& operator[](const size_t index) const;      // Subscript operator for const objects returns rValue
+    T&  operator[](const size_t index);                 // Subscript operator for non-const objects returns lValue
 
     bool operator==(const Array<T>& rightArr) const;    // Array comparison
     bool operator!=(const Array<T>& rightArr) const;    // Array comparison by inequality
@@ -35,7 +38,7 @@ public:
     const Array<T>& operator=(const Array<T>& rightArr);    // Array assignment
 
     /* Declaring a function as a friend inside of a template class
-       corrupts its usage. You may want to check the holy StackOverflow :)
+       corrupts the template usage. You may want to check the holy StackOverflow :)
        stackoverflow.com/questions/4660123 */
     template<class _T>
     friend std::ostream& operator<<(std::ostream& stream, const Array<_T>& array);
@@ -47,10 +50,16 @@ public:
     { return (container == nullptr) ? 0 : size; }
 
 private:
-    const size_t size   = 0;        // Size will be initialized at constructor, and will never change again
-    T* container        = nullptr;  // Pointer will be used for pointing the allocated area
+    const size_t size   = 0;        // Size will be initialized at constructor
+    T* container        = nullptr;  // Pointer will be used for addressing the allocated area
 };
 
+
+/**
+ * @brief Array             Constructs the internal array of given size
+ * @param arraySize         Allocation size
+ * @throws std::logic_error When size is zero
+ */
 template<class T>
 Array<T>::Array(size_t arraySize)
 : size(arraySize), container(nullptr)
@@ -61,6 +70,11 @@ Array<T>::Array(size_t arraySize)
     container = new T[size];
 }
 
+/**
+ * @brief Array             Copy constructor
+ * @param copyArr           Source array
+ * @throws std::logic_error When size is zero
+ */
 template<class T>
 Array<T>::Array(const Array<T>& copyArr)
 : size(copyArr.getSize()), container(nullptr)
@@ -75,6 +89,11 @@ Array<T>::Array(const Array<T>& copyArr)
         (*this)[index] = copyArr[index];
 }
 
+/**
+ * @brief Array             Move constructor
+ * @param moveArr           Source array, created locally
+ * @throws std::logic_error When size is zero
+ */
 template<class T>
 Array<T>::Array(Array<T>&& moveArr)
 : size(moveArr.getSize()), container(moveArr.container)
@@ -89,12 +108,22 @@ Array<T>::Array(Array<T>&& moveArr)
     moveArr.container = nullptr;
 }
 
+/**
+ * @brief Array             Construct with C-Style array
+ * @param source            Source array
+ * @param size              Source array size
+ * @throws std::logic_error When size is zero
+ * @throws std::logic_error When source is invalid
+ */
 template<class T>
 Array<T>::Array(const T* const source, const size_t size)
 : size(size), container(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
         throw std::logic_error("Array size cannot be zero!");
+    else if(source == nullptr)
+        throw std::logic_error("Invalid source!");
+    else;
 
     container = new T[size];    // Allocate space to copy elements
 
@@ -102,6 +131,11 @@ Array<T>::Array(const T* const source, const size_t size)
         (*this)[index] = source[index];
 }
 
+/**
+ * @brief Array             Construction with initializer list
+ * @param initializerList   Initializer list
+ * @throws std::logic_error When size of initializer list is zero
+ */
 template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
 : size(initializerList.size()), container(nullptr)
@@ -116,14 +150,25 @@ Array<T>::Array(std::initializer_list<T> initializerList)
         container[index++] = element;
 }
 
+/**
+ * @brief ~Array  Destructor
+ */
 template<class T>
 Array<T>::~Array()
 {
     delete [] container;    // Deleting a nullptr is safe, don't worry
 }
 
+
+/**
+ * @brief operator []   Subscript operator for rValue return
+ * @param index         Index of element to be fetched
+ * @return rValue reference to the data at given index
+ * @throws std::logic_error When container is empty or corrupted
+ * @throws std::range_error When given index is out of container range
+ */
 template<class T>
-T Array<T>::operator[](const size_t index) const
+const T& Array<T>::operator[](const size_t index) const
 {
     if(index < size)    // Check for out-of-range random access
         return container[index];
@@ -139,6 +184,13 @@ T Array<T>::operator[](const size_t index) const
     throw std::range_error(errorMessage);
 }
 
+/**
+ * @brief operator []   Subscript operator for lValue return
+ * @param index         Index of element to be fetched
+ * @return lValue reference to the data at given index
+ * @throws std::logic_error When container is empty or corrupted
+ * @throws std::range_error When given index is out of container range
+ */
 template<class T>
 T& Array<T>::operator[](const size_t index)
 {
@@ -156,6 +208,11 @@ T& Array<T>::operator[](const size_t index)
     throw std::range_error(errorMessage);
 }
 
+/**
+ * @brief operator ==   Overloaded comparison operator
+ * @param rightArr      Array to be compared against
+ * @return true         If arrays are equal
+ */
 template<class T>
 bool Array<T>::operator==(const Array<T>& rightArr) const
 {
@@ -175,12 +232,25 @@ bool Array<T>::operator==(const Array<T>& rightArr) const
     return true;    // Arrays are the same
 }
 
+/**
+ * @brief operator !=   Overloaded comparison operator
+ * @param rightArr      Array to be compared against
+ * @return true         If arrays are not equal
+ */
 template<class T>
 bool Array<T>::operator!=(const Array<T>& right) const
 {   // Inequality operator returns the opposite of equality operator
     return !(*this == right);   // Invokes Array::operator==
 }
 
+
+/**
+ * @brief operator =    Assigment operator
+ * @param rightArr      Source array
+ * @return rValue reference to resulting array.
+ *
+ * @note The content of left array will be deleted. So, be careful.
+ */
 template<class T>
 const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
 {   // Return a const reference to support cascade assignments(e.g. arr = arr1 = arr2)
@@ -196,6 +266,13 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
     return *this;
 }
 
+
+/**
+ * @brief operator <<   Overloaded output instertion operator
+ * @param stream        Destination output stream for insertion
+ * @param array         Array to be inserted
+ * @return ostream reference to support cascaded insertions.
+ */
 template<class T>
 std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
 {
@@ -211,6 +288,12 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
     return stream;  // Return reference to support cascade streaming
 }
 
+/**
+ * @brief operator >>   Overloaded input instertion operator
+ * @param stream        Source input stream for insertion
+ * @param array         Array to be inserted
+ * @return istream reference to support cascaded insertions.
+ */
 template<class T>
 std::istream& operator>>(std::istream& stream, Array<T>& array)
 {

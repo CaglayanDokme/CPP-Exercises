@@ -3,7 +3,6 @@
  *              doubly linked list structure.
  *  @author     Caglayan DOKME, caglayandokme@gmail.com
  *  @date       February 25, 2021 -> First release
- *                                ->
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  */

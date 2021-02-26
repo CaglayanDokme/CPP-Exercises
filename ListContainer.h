@@ -5,6 +5,7 @@
  *  @date       February 25, 2021 -> First release
  *              February 26, 2021 -> File documented with doxygen.
  *                                -> Conditional remove functions added.
+ *                                -> Swap function added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -39,6 +40,8 @@ public:
     List<T>& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
     List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
     List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
+
+    void Swap(List<T>& anotherList);    // Exchanges the content of the list by the content of another list
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -363,6 +366,36 @@ List<T>& List<T>::RemoveLastNotOf(const T& data)
     RemoveNode(FindNotOfReversed(data, lastPtr));
 
     return *this;
+}
+
+/**
+ * @brief   Swaps two different lists' contents.
+ * @param   anotherList     List to be swapped with this.
+ * @note    There is no need to make a complete swap.
+ *          Interchancing the first and last nodes does the same.
+ */
+template<class T>
+void List<T>::Swap(List<T>& anotherList)
+{
+    if(*this == anotherList)
+        return;     // Self swap is not required
+
+    ListNode<T>* tempPtr;
+    size_t tempSize;
+
+    // Swap the first nodes of each list
+    tempPtr                 = firstPtr;             // Save the firstPtr of this
+    firstPtr                = anotherList.firstPtr; // Replace the firstPtr of this
+    anotherList.firstPtr    = tempPtr;             // Replace the firstPtr of the other list
+
+    tempPtr                 = lastPtr;             // Save the lastPtr of this
+    lastPtr                 = anotherList.lastPtr; // Replace the lastPtr of this
+    anotherList.lastPtr     = tempPtr;             // Replace the lastPtr of the other list
+
+    // Swap the size values
+    tempSize                    = numberOfNodes;                // Save the size of this list
+    numberOfNodes               = anotherList.numberOfNodes;    // Replace the size of this
+    anotherList.numberOfNodes   = tempSize;                     // Replace the size of the other list
 }
 
 /**

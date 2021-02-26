@@ -1,20 +1,20 @@
 /**
- * @file       ArrayContainer.h
- * @details    A template container class with array data structure.
- *             Provides copy construction, array-copy features, array comparison etc.
- *             Provides informative exception messages.
- * @author     Caglayan DOKME, caglayandokme@gmail.com
- * @date       February 23, 2021 -> First release
- *             February 24, 2021 -> Array comparison and assignment added.
- *                                  Copy and move constructor added.
- *                                  Construction with traditional array added.
- *                                  Stream insertion operators overloaded.
- *                                  Initializer list constructor added.
- *                                  Constructor exception mechanism enhanced.
- *             February 25, 2021 -> File documented with doxygen.
+ * @file        ArrayContainer.h
+ * @details     A template container class with array data structure.
+ *              Provides copy construction, array-copy features, array comparison etc.
+ *              Provides informative exception messages.
+ * @author      Caglayan DOKME, caglayandokme@gmail.com
+ * @date        February 23, 2021 -> First release
+ *              February 24, 2021 -> Array comparison and assignment added.
+ *                                   Copy and move constructor added.
+ *                                   Construction with traditional array added.
+ *                                   Stream insertion operators overloaded.
+ *                                   Initializer list constructor added.
+ *                                   Constructor exception mechanism enhanced.
+ *              February 25, 2021 -> File documented with doxygen.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
- *  @copyright  Use wherever you need :)
+ *  @copyright  No copyright. Code is open source.
  */
 
 #include <iostream>
@@ -59,12 +59,12 @@ private:
 
 
 /**
- * @brief Array             Constructs the internal array of given size
- * @param arraySize         Allocation size
- * @throws std::logic_error When size is zero
+ * @brief   Constructs the internal array of given size
+ * @param   arraySize Allocation size
+ * @throws  std::logic_error When size is zero
  */
 template<class T>
-Array<T>::Array(size_t arraySize)
+Array<T>::Array(const size_t arraySize)
 : size(arraySize), container(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
@@ -74,9 +74,9 @@ Array<T>::Array(size_t arraySize)
 }
 
 /**
- * @brief Array             Copy constructor
- * @param copyArr           Source array
- * @throws std::logic_error When size is zero
+ * @brief   Copy constructor
+ * @param   copyArr     Source array
+ * @throws  std::logic_error When size is zero
  */
 template<class T>
 Array<T>::Array(const Array<T>& copyArr)
@@ -93,9 +93,9 @@ Array<T>::Array(const Array<T>& copyArr)
 }
 
 /**
- * @brief Array             Move constructor
- * @param moveArr           Source array, created locally
- * @throws std::logic_error When size is zero
+ * @brief   Move constructor
+ * @param   moveArr     Source array, created locally
+ * @throws  std::logic_error When size is zero
  */
 template<class T>
 Array<T>::Array(Array<T>&& moveArr)
@@ -112,11 +112,11 @@ Array<T>::Array(Array<T>&& moveArr)
 }
 
 /**
- * @brief Array             Construct with C-Style array
- * @param source            Source array
- * @param size              Source array size
- * @throws std::logic_error When size is zero
- * @throws std::logic_error When source is invalid
+ * @brief   Construct with C-Style array
+ * @param   source  Source array
+ * @param   size    Source array size
+ * @throws  std::logic_error When size is zero
+ * @throws  std::logic_error When source is invalid
  */
 template<class T>
 Array<T>::Array(const T* const source, const size_t size)
@@ -135,9 +135,9 @@ Array<T>::Array(const T* const source, const size_t size)
 }
 
 /**
- * @brief Array             Construction with initializer list
- * @param initializerList   Initializer list
- * @throws std::logic_error When size of initializer list is zero
+ * @brief   Construction with initializer list
+ * @param   initializerList   Initializer list
+ * @throws  std::logic_error When size of initializer list is zero
  */
 template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
@@ -154,7 +154,7 @@ Array<T>::Array(std::initializer_list<T> initializerList)
 }
 
 /**
- * @brief ~Array  Destructor
+ * @brief Destructor
  */
 template<class T>
 Array<T>::~Array()
@@ -164,11 +164,11 @@ Array<T>::~Array()
 
 
 /**
- * @brief operator []   Subscript operator for rValue return
- * @param index         Index of element to be fetched
- * @return rValue reference to the data at given index
- * @throws std::logic_error When container is empty or corrupted
- * @throws std::range_error When given index is out of container range
+ * @brief   Subscript operator for rValue return
+ * @param   index   Index of element to be fetched
+ * @return  rValue reference to the data at given index
+ * @throws  std::logic_error When container is empty or corrupted
+ * @throws  std::range_error When given index is out of container range
  */
 template<class T>
 const T& Array<T>::operator[](const size_t index) const
@@ -188,11 +188,11 @@ const T& Array<T>::operator[](const size_t index) const
 }
 
 /**
- * @brief operator []   Subscript operator for lValue return
- * @param index         Index of element to be fetched
- * @return lValue reference to the data at given index
- * @throws std::logic_error When container is empty or corrupted
- * @throws std::range_error When given index is out of container range
+ * @brief   Subscript operator for lValue return
+ * @param   index   Index of element to be fetched
+ * @return  lValue reference to the data at given index
+ * @throws  std::logic_error When container is empty or corrupted
+ * @throws  std::range_error When given index is out of container range
  */
 template<class T>
 T& Array<T>::operator[](const size_t index)
@@ -212,9 +212,10 @@ T& Array<T>::operator[](const size_t index)
 }
 
 /**
- * @brief operator ==   Overloaded comparison operator
- * @param rightArr      Array to be compared against
- * @return true         If arrays are equal
+ * @brief   Overloaded comparison operator
+ * @param   rightArr Array to be compared against
+ * @return  true     If arrays are equal.
+ *          false    If any difference is detected.
  */
 template<class T>
 bool Array<T>::operator==(const Array<T>& rightArr) const
@@ -236,9 +237,10 @@ bool Array<T>::operator==(const Array<T>& rightArr) const
 }
 
 /**
- * @brief operator !=   Overloaded comparison operator
- * @param rightArr      Array to be compared against
- * @return true         If arrays are not equal
+ * @brief   Overloaded comparison operator
+ * @param   rightArr    Array to be compared against
+ * @return  true        If arrays are not equal
+ *          false       If arrays are equal
  */
 template<class T>
 bool Array<T>::operator!=(const Array<T>& right) const
@@ -248,11 +250,11 @@ bool Array<T>::operator!=(const Array<T>& right) const
 
 
 /**
- * @brief operator =    Assigment operator
- * @param rightArr      Source array
- * @return rValue reference to resulting array.
+ * @brief   Assigment operator
+ * @param   rightArr      Source array
+ * @return  rValue reference to resulting array.
  *
- * @note The content of left array will be deleted. So, be careful.
+ * @note    The content of left array will be deleted. So, be careful.
  */
 template<class T>
 const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
@@ -271,10 +273,10 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
 
 
 /**
- * @brief operator <<   Overloaded output instertion operator
- * @param stream        Destination output stream for insertion
- * @param array         Array to be inserted
- * @return ostream reference to support cascaded insertions.
+ * @brief   Overloaded output instertion operator
+ * @param   stream  Destination output stream for insertion
+ * @param   array   Array to be inserted
+ * @return  ostream reference to support cascaded insertions.
  */
 template<class T>
 std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
@@ -292,10 +294,10 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
 }
 
 /**
- * @brief operator >>   Overloaded input instertion operator
- * @param stream        Source input stream for insertion
- * @param array         Array to be inserted
- * @return istream reference to support cascaded insertions.
+ * @brief   Overloaded input instertion operator
+ * @param   stream  Source input stream for insertion
+ * @param   array   Array to be inserted
+ * @return  istream reference to support cascaded insertions.
  */
 template<class T>
 std::istream& operator>>(std::istream& stream, Array<T>& array)

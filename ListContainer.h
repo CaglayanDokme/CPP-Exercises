@@ -3,8 +3,10 @@
  *              doubly linked list structure.
  *  @author     Caglayan DOKME, caglayandokme@gmail.com
  *  @date       February 25, 2021 -> First release
+ *              February 26, 2021 -> File documented with doxygen.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
+ *  @copyright  No copyright. Code is open source.
  */
 
 #include <iostream>
@@ -70,11 +72,18 @@ private:
     ListNode* nextPtr = nullptr;
 };
 
+/**
+ * @brief Default constructor
+ */
 template<class T>
 List<T>::List()
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 { /* Empty constructor */ }
 
+
+/**
+ * @brief Destroys all nodes one by one
+ */
 template<class T>
 List<T>::~List()
 {
@@ -83,6 +92,12 @@ List<T>::~List()
         RemoveFirst();
 }
 
+
+/**
+ * @brief   Appends the given data next to the last node
+ * @param   data      Data to be appended
+ * @return  lValue reference to the current list to support cascades
+ */
 template<class T>
 List<T>& List<T>::Append(const T& data)
 {
@@ -103,6 +118,12 @@ List<T>& List<T>::Append(const T& data)
     return *this;   // Support cascaded appends
 }
 
+
+/**
+ * @brief   Prepends the data before the first node
+ * @param   data      Data to be prepended
+ * @return  lValue reference to the current list to support cascades
+ */
 template<class T>
 List<T>& List<T>::Prepend(const T& data)
 {
@@ -123,6 +144,12 @@ List<T>& List<T>::Prepend(const T& data)
     return *this;
 }
 
+
+/**
+ * @brief   Iterator to reach to the first element.
+ * @return  rValue reference to the data of first node.
+ * @throws  std::logic_error If the list is empty
+ */
 template<class T>
 const T& List<T>::First() const
 {
@@ -132,6 +159,11 @@ const T& List<T>::First() const
     return firstPtr->data;
 }
 
+/**
+ * @brief   Iterator to reach to the last element.
+ * @return  rValue reference to the data of last node.
+ * @throws  std::logic_error If the list is empty
+ */
 template<class T>
 const T& List<T>::Last() const
 {
@@ -141,6 +173,11 @@ const T& List<T>::Last() const
     return lastPtr->data;
 }
 
+/**
+ * @brief   Iterator to reach to the first element.
+ * @return  lValue reference to the data of first node.
+ * @throws  std::logic_error If the list is empty
+ */
 template<class T>
 T& List<T>::First()
 {
@@ -150,6 +187,11 @@ T& List<T>::First()
     return firstPtr->data;
 }
 
+/**
+ * @brief   Iterator to reach to the last element.
+ * @return  lValue reference to the data of last node.
+ * @throws  std::logic_error If the list is empty
+ */
 template<class T>
 T& List<T>::Last()
 {
@@ -159,6 +201,10 @@ T& List<T>::Last()
     return lastPtr->data;
 }
 
+/**
+ * @brief   Removes the first node
+ * @return  lValue reference to the current list to support cascaded calls
+ */
 template<class T>
 List<T>& List<T>::RemoveFirst()
 {
@@ -176,6 +222,10 @@ List<T>& List<T>::RemoveFirst()
     return *this;   // Support cascaded remove calls
 }
 
+/**
+ * @brief   Removes the last node
+ * @return  lValue reference to the current list to support cascaded calls
+ */
 template<class T>
 List<T>& List<T>::RemoveLast()
 {
@@ -193,6 +243,11 @@ List<T>& List<T>::RemoveLast()
     return *this;   // Support cascaded remove calls
 }
 
+
+/**
+ * @brief   Removes all nodes
+ * @return  lValue reference to the empty list to support cascaded calls
+ */
 template<class T>
 List<T>& List<T>::EraseAll()
 {
@@ -201,6 +256,12 @@ List<T>& List<T>::EraseAll()
         RemoveFirst();
 }
 
+
+/**
+ * @brief   Removes all samples of a specific kind of data
+ * @param   data    Value to be removed
+ * @return  lValue reference to the list to support cascaded calls
+ */
 template<class T>
 List<T>& List<T>::RemoveIf(const T& data)
 {
@@ -220,6 +281,12 @@ List<T>& List<T>::RemoveIf(const T& data)
     return *this;
 }
 
+/**
+ * @brief   Output insertion overloaded to be used with a list
+ * @param   stream  Output stream where the list will be inserted to.
+ * @param   list    List to be inserted.
+ * @return  lValue reference to stream to support cascaded calls.
+ */
 template<class T>
 std::ostream& operator<<(std::ostream& stream, List<T>& list)
 {
@@ -231,6 +298,10 @@ std::ostream& operator<<(std::ostream& stream, List<T>& list)
     return stream; // Support cascaded streams
 }
 
+/**
+ * @brief Prints the data of all nodes
+ * @param stream    Output stream where the list will be inserted to.
+ */
 template<class T>
 void List<T>::PrintAll(std::ostream& stream)
 {
@@ -238,6 +309,15 @@ void List<T>::PrintAll(std::ostream& stream)
         stream << currentNode->data << " ";
 }
 
+
+/**
+ * @brief   Finds the address of the first node where the specified data is contained at.
+ * @param   data          Search key
+ * @param   beginByNode   Search start by the given node
+ * @return  Address of the first sample of given search key
+ *          Returns nullptr if the data couldn't found.
+ * @note    The algorithm used is the linear search as there are no value-based relation between nodes.
+ */
 template<class T>
 ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
 {
@@ -257,6 +337,10 @@ ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
     return currentNode;
 }
 
+/**
+ * @brief   Removes the given node.
+ * @param   removingNode Address of the node to be removed.
+ */
 template<class T>
 void List<T>::RemoveNode(ListNode<T>* removingNode)
 {

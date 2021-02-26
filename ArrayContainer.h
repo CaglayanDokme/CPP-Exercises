@@ -12,6 +12,9 @@
  *                                  Initializer list constructor added.
  *                                  Constructor exception mechanism enhanced.
  *             February 25, 2021 -> File documented with doxygen.
+ *
+ *  @note       Feel free to contact for questions, bugs or any other thing.
+ *  @copyright  Use wherever you need :)
  */
 
 #include <iostream>

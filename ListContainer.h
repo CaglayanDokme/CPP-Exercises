@@ -4,6 +4,7 @@
  *  @author     Caglayan DOKME, caglayandokme@gmail.com
  *  @date       February 25, 2021 -> First release
  *              February 26, 2021 -> File documented with doxygen.
+ *                                -> Conditional remove functions added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -32,7 +33,9 @@ public:
     List<T>& RemoveFirst(); // Remove the first node
     List<T>& RemoveLast();  // Remove the last node
     List<T>& EraseAll();    // Remove all elements
-    List<T>& RemoveIf(const T& data); // Remove all samples of a specific data
+    List<T>& RemoveIf(const T& data);       // Remove all samples of a specific data
+    List<T>& RemoveFirstOf(const T& data);  // Remove the first sample of a specific data
+    List<T>& RemoveLastOf(const T& data);   // Remove the last sample of a specific data
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -50,6 +53,7 @@ public:
 
 private:
     ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
+    ListNode<T>* FindReversed(const T& data, ListNode<T>* beginByNode);
     void RemoveNode(ListNode<T>* removingNode);
 
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
@@ -282,6 +286,32 @@ List<T>& List<T>::RemoveIf(const T& data)
 }
 
 /**
+ * @brief   Removes the first sample of given data.
+ * @param   data Search key
+ * @return  lValue reference to the list to support cascaded calls
+ */
+template<class T>
+List<T>& List<T>::RemoveFirstOf(const T& data)
+{
+    RemoveNode(Find(data, firstPtr));   // Find and remove the first sample
+
+    return *this;
+}
+
+/**
+ * @brief   Removes the last sample of given data.
+ * @param   data Search key
+ * @return  lValue reference to the list to support cascaded calls
+ */
+template<class T>
+List<T>& List<T>::RemoveLastOf(const T& data)
+{
+    RemoveNode(FindReversed(data, lastPtr));   // Find and remove the last sample
+
+    return *this;
+}
+
+/**
  * @brief   Output insertion overloaded to be used with a list
  * @param   stream  Output stream where the list will be inserted to.
  * @param   list    List to be inserted.
@@ -332,6 +362,33 @@ ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
             break;
         else
             currentNode = currentNode->nextPtr;
+    }
+
+    return currentNode;
+}
+
+/**
+ * @brief   Finds the address of the last node where the specified data is contained at.
+ * @param   data          Search key
+ * @param   beginByNode   Search start by the given node
+ * @return  Address of the last sample of given search key
+ *          Returns nullptr if the data couldn't found.
+ * @note    The algorithm used is the reversed linear search as there are no value-based relation between nodes.
+ */
+template<class T>
+ListNode<T>* List<T>::FindReversed(const T& data, ListNode<T>* beginByNode)
+{
+    // Search begins by the given node
+    ListNode<T>* currentNode = beginByNode;
+
+    /* Break the search if the element is found
+     * or the first element is hit */
+    while(currentNode != nullptr)
+    {
+        if(currentNode->data == data)
+            break;
+        else
+            currentNode = currentNode->prevPtr; // Search advances reversely
     }
 
     return currentNode;

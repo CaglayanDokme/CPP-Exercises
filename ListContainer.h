@@ -9,6 +9,7 @@
  *              February 27, 2021 -> Resize function added.
  *                                -> Remove function with lambda predicate added.
  *                                -> Duplicate remover function added.
+ *                                -> Sort method added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -49,6 +50,7 @@ public:
     void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
     void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
     void Unique();  // Remove duplicate values
+    void Sort();    // Sorts in ascending order
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -69,8 +71,14 @@ private:
     ListNode<T>* FindNotOf(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindReversed(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindNotOfReversed(const T& data, ListNode<T>* beginByNode);
+    ListNode<T>* FindMinimum(ListNode<T>* beginByNode);
+
     void RemoveNode(ListNode<T>* removingNode);
     List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);           // Remove all samples of a specific data
+
+    void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
+    void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
+    void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
 
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
     ListNode<T>* lastPtr    = nullptr;  // Last node of the list
@@ -461,6 +469,25 @@ void List<T>::Unique()
 }
 
 /**
+ * @brief Sorts the elements with insertion sort.
+ */
+template<class T>
+void List<T>::Sort()
+{
+    // At least two nodes required for sorting
+    if((isEmpty() == true) || (firstPtr == lastPtr))
+        return;
+
+    ListNode<T> *minNode, *swapNode = firstPtr;
+    while (swapNode != nullptr)
+    {
+        minNode = FindMinimum(swapNode);    // Find the minimum node of the list after (including)swap node
+        SwapNodes(minNode, swapNode);       // Swap the minimum node and swapNode
+        swapNode = minNode->nextPtr;        // Continue from the next node
+    }
+}
+
+/**
  * @brief   Output insertion overloaded to be used with a list
  * @param   stream  Output stream where the list will be inserted to.
  * @param   list    List to be inserted.
@@ -485,9 +512,10 @@ template<class T>
 void List<T>::PrintAll(std::ostream& stream)
 {
     for(ListNode<T>* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
+    {
         stream << currentNode->data << " ";
+    }
 }
-
 
 /**
  * @brief   Finds the address of the first node where the specified data is contained at.
@@ -515,7 +543,6 @@ ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
 
     return currentNode;
 }
-
 
 /**
  * @brief   Finds the address of the first node where the data is not the specified one.
@@ -598,6 +625,34 @@ ListNode<T>* List<T>::FindNotOfReversed(const T& data, ListNode<T>* beginByNode)
     return currentNode;
 }
 
+/**
+ * @brief   Finds the node with minimum data starting from a given node
+ * @param   beginByNode Search starts from this node.s
+ * @return  Address of the node with minimum data.
+ * @throws  std::logic_error If the list is empty or the start node is undefined.
+ */
+template<class T>
+ListNode<T>* List<T>::FindMinimum(ListNode<T>* beginByNode)
+{
+    // Check for exceptional situations
+    if(beginByNode == nullptr)
+        throw std::logic_error("Start node cannot be a nullptr!");
+    else if(isEmpty() == true)
+        throw std::logic_error("List is empty!");
+    else{}
+
+    ListNode<T>* currentNode = beginByNode->nextPtr, *minNode = beginByNode;
+
+    while(currentNode != nullptr)
+    {
+        if(currentNode->data < minNode->data)
+            minNode = currentNode;
+
+        currentNode = currentNode->nextPtr;
+    }
+
+    return minNode;
+}
 
 /**
  * @brief   Removes the given node.
@@ -646,4 +701,140 @@ List<T>& List<T>::RemoveIf(const T& data, ListNode<T>* beginByNode)
     }
 
     return *this;
+}
+
+/**
+ * @brief   Swaps any kind of nodes.
+ * @param   firstNode   Node to be swapped.
+ * @param   secondNode  Node to be swapped.
+ * @throws  std::logic_error If the nodes are undefined.
+ */
+template<class T>
+void List<T>::SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+{
+    // Check for exceptional situations
+    if((firstNode == nullptr) || (secondNode == nullptr))
+        throw std::logic_error("Cannot swap undefined nodes!");
+    else if (firstNode == secondNode)
+        return; // No need to swap
+    else{}
+
+    // Successive nodes should be handled in a slightly different way
+    if(firstNode->nextPtr == secondNode)
+        SwapSuccessiveNodes(firstNode, secondNode);
+    else if (firstNode->prevPtr == secondNode)
+        SwapSuccessiveNodes(secondNode, firstNode);
+    else
+        SwapNonSuccessiveNodes(firstNode, secondNode);
+}
+
+/**
+ * @brief   Swaps successive nodes.
+ * @param   firstNode   Node to be swapped.
+ * @param   secondNode  Node to be swapped.
+ * @throws  std::logic_error If the nodes are not successively bounded.
+ */
+template<class T>
+void List<T>::SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+{
+    // Check for exceptional situations
+    if((firstNode->nextPtr != secondNode) || (secondNode->prevPtr != firstNode))
+        throw std::logic_error("Nodes are not successive!");
+
+    // Rebuild links between successive nodes
+    secondNode->prevPtr = firstNode->prevPtr;
+    firstNode->nextPtr  = secondNode->nextPtr;
+
+    // Adjust the previous and next nodes
+    // firstPtr and lastPtr may be modified
+    if(firstNode != firstPtr)
+        firstNode->prevPtr->nextPtr = secondNode;
+    else
+        firstPtr = secondNode;
+
+    if(secondNode != lastPtr)
+        secondNode->nextPtr->prevPtr = firstNode;
+    else
+        lastPtr = firstNode;
+
+    firstNode->prevPtr  = secondNode;
+    secondNode->nextPtr = firstNode;
+}
+
+/**
+ * @brief   Swaps the nonsuccessive nodes between each other.
+ * @param   firstNode   Node to be swapped.
+ * @param   secondNode  Node to be swapped.
+ * @throws  std::logic_error If any node is undefined.
+ * @throws  std::logic_error If nodes are the same.
+ */
+template<class T>
+void List<T>::SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+{
+    // Check for exceptional situations
+    if((firstNode == nullptr) || (secondNode == nullptr))
+        throw std::logic_error("Cannot swap undefined nodes!");
+    else if (firstNode == secondNode)
+        throw std::logic_error("Nodes must be different!");
+    else if(firstNode->nextPtr == secondNode)
+        return SwapSuccessiveNodes(firstNode, secondNode);
+    else if(firstNode->prevPtr == secondNode)
+        return SwapSuccessiveNodes(secondNode, firstNode);
+    else{}
+
+    ListNode<T>* tempPtr = nullptr;
+
+    /** Update previos pointers **/
+    if(firstNode == firstPtr)	// First one is the firstPtr
+    {
+        secondNode->prevPtr->nextPtr 	= firstNode;
+        firstNode->prevPtr 				= secondNode->prevPtr;
+        secondNode->prevPtr 			= nullptr;
+        firstPtr                        = secondNode;	// Change global firstPtr
+    }
+    else
+    {
+        if(secondNode == firstPtr)	// Second one is the firstPtr
+        {
+            firstNode->prevPtr->nextPtr	= secondNode;
+            secondNode->prevPtr			= firstNode->prevPtr;
+            firstNode->prevPtr 			= nullptr;
+            firstPtr                    = firstNode;	// Change global firstPtr
+        }
+        else	// Both of the nodes are not the edges of the list
+        {
+            firstNode->prevPtr->nextPtr 	= secondNode;
+            secondNode->prevPtr->nextPtr 	= firstNode;
+            tempPtr                         = secondNode->prevPtr;
+            secondNode->prevPtr 			= firstNode->prevPtr;
+            firstNode->prevPtr 				= tempPtr;
+        }
+    }
+
+    /** Update next pointers **/
+    if(firstNode == lastPtr)	// First one is the lastPtr
+    {
+        firstNode->nextPtr 				= secondNode->nextPtr;
+        secondNode->nextPtr->prevPtr 	= firstNode;
+        secondNode->nextPtr 			= nullptr;
+        lastPtr                         = secondNode;	// Change global lastPtr
+    }
+    else
+    {
+        if(secondNode == lastPtr)	// Second one is the lastPtr
+        {
+            secondNode->nextPtr 		= firstNode->nextPtr;
+            firstNode->nextPtr->prevPtr = secondNode;
+            firstNode->nextPtr 			= nullptr;
+            lastPtr                     = firstNode;	// Change the global lastPtr
+        }
+        else	// Both of the nodes are not the edges of the list
+        {
+            firstNode->nextPtr->prevPtr 	= secondNode;
+            secondNode->nextPtr->prevPtr 	= firstNode;
+            tempPtr                         = firstNode->nextPtr;
+            firstNode->nextPtr 				= secondNode->nextPtr;
+            secondNode->nextPtr 			= tempPtr;
+        }
+    }
 }

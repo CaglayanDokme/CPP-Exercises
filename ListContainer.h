@@ -6,6 +6,8 @@
  *              February 26, 2021 -> File documented with doxygen.
  *                                -> Conditional remove functions added.
  *                                -> Swap function added.
+ *              February 27, 2021 -> Resize function added.
+ *                                   Remove function with lambda predicate added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -31,6 +33,8 @@ public:
     T& First();             // Get the first data as an lValue
     T& Last();              // Get the first data as an lValue
 
+    template<class RuleT>
+    List<T>& RemoveIf(RuleT Predicate);         // Remove all fulfilling the condition of predicate
     List<T>& EraseAll();                        // Remove all elements
     List<T>& RemoveFirst();                     // Remove the first node
     List<T>& RemoveLast();                      // Remove the last node
@@ -41,8 +45,8 @@ public:
     List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
     List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
 
-    void Swap(List<T>& anotherList);                    // Exchanges the content of the list by the content of another list
-    void Resize(const size_t newSize, const T& data = 0);     // Resizes the list so that it contains newSize of elements
+    void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
+    void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -211,6 +215,37 @@ T& List<T>::Last()
         throw std::logic_error("List is empty!");
 
     return lastPtr->data;
+}
+
+/**
+ * @brief   Removes from the list all the elements for which Predicate returns true.
+ * @param   Predicate   Unary predicate that, taking a value of the same type as those
+ *                      contained in the list nodes, returns true for those values to be
+ *                      removed from the list, and false for those remaining.
+ * @return  lValue reference to the current list to support cascaded calls
+ * @note    An example call would look like this
+ *          userList.RemoveIf([](T value) {return value > XXX;});
+ *
+ * @note    For more examples, refer to:
+ *          github.com/CaglayanDokme/CPP-Exercises/blob/main/FuncWithLambdaArg.cpp
+ */
+template<class T>
+template<class RuleT>
+List<T>& List<T>::RemoveIf(RuleT Predicate)
+{
+    ListNode<T> *currentNode = firstPtr, *tempNode;
+
+    while(currentNode != nullptr)
+    {
+        tempNode = currentNode->nextPtr;
+
+        if(Predicate(currentNode->data) == true)
+            RemoveNode(currentNode);
+
+        currentNode = tempNode;
+    }
+
+    return *this; // Support cascaded calls
 }
 
 /**

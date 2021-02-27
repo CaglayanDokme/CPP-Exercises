@@ -28,20 +28,21 @@ public:
 
     const T& First() const; // Get the first data as an rValue
     const T& Last() const;  // Get the last data as an rValue
-    T& First(); // Get the first data as an lValue
-    T& Last();  // Get the first data as an lValue
+    T& First();             // Get the first data as an lValue
+    T& Last();              // Get the first data as an lValue
 
-    List<T>& EraseAll();    // Remove all elements
-    List<T>& RemoveFirst(); // Remove the first node
-    List<T>& RemoveLast();  // Remove the last node
-    List<T>& RemoveIf(const T& data);       // Remove all samples of a specific data
-    List<T>& RemoveFirstOf(const T& data);  // Remove the first sample of a specific data
-    List<T>& RemoveLastOf(const T& data);   // Remove the last sample of a specific data
+    List<T>& EraseAll();                        // Remove all elements
+    List<T>& RemoveFirst();                     // Remove the first node
+    List<T>& RemoveLast();                      // Remove the last node
+    List<T>& RemoveIf(const T& data);           // Remove all samples of a specific data
+    List<T>& RemoveFirstOf(const T& data);      // Remove the first sample of a specific data
+    List<T>& RemoveLastOf(const T& data);       // Remove the last sample of a specific data
     List<T>& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
     List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
     List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
 
-    void Swap(List<T>& anotherList);    // Exchanges the content of the list by the content of another list
+    void Swap(List<T>& anotherList);                    // Exchanges the content of the list by the content of another list
+    void Resize(const size_t newSize, const T& data = 0);     // Resizes the list so that it contains newSize of elements
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -396,6 +397,23 @@ void List<T>::Swap(List<T>& anotherList)
     tempSize                    = numberOfNodes;                // Save the size of this list
     numberOfNodes               = anotherList.numberOfNodes;    // Replace the size of this
     anotherList.numberOfNodes   = tempSize;                     // Replace the size of the other list
+}
+
+/**
+ * @brief Resizes the list so that it contains n elements
+ * @param newSize   New list size, expressed in number of elements
+ * @param data      Object whose content is copied to the appended nodes
+ */
+template<class T>
+void List<T>::Resize(const size_t newSize, const T& data)
+{
+    // Remove excessive nodes if exists
+    while(newSize < GetNodeCount())
+        RemoveLast();
+
+    // Append new nodes if needed
+    while(newSize > GetNodeCount())
+        Append(data);
 }
 
 /**

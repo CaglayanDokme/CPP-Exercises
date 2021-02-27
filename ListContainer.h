@@ -7,7 +7,8 @@
  *                                -> Conditional remove functions added.
  *                                -> Swap function added.
  *              February 27, 2021 -> Resize function added.
- *                                   Remove function with lambda predicate added.
+ *                                -> Remove function with lambda predicate added.
+ *                                -> Duplicate remover function added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -47,6 +48,7 @@ public:
 
     void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
     void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
+    void Unique();  // Remove duplicate values
 
     bool isEmpty() const
     { return (numberOfNodes == 0); }
@@ -68,6 +70,7 @@ private:
     ListNode<T>* FindReversed(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindNotOfReversed(const T& data, ListNode<T>* beginByNode);
     void RemoveNode(ListNode<T>* removingNode);
+    List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);           // Remove all samples of a specific data
 
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
     ListNode<T>* lastPtr    = nullptr;  // Last node of the list
@@ -310,20 +313,8 @@ List<T>& List<T>::RemoveLast()
 template<class T>
 List<T>& List<T>::RemoveIf(const T& data)
 {
-    ListNode<T>* removingNode;      // Node to be removed
-    ListNode<T>* searchStartPoint;  // Node where the search will start
-
-    /* Find and remove all specified nodes until
-     * we hit the last of the list */
-    removingNode = Find(data, firstPtr);    // Find the first sample
-    while(removingNode != nullptr)
-    {
-        searchStartPoint = removingNode->nextPtr;       // Save the next node
-        RemoveNode(removingNode);                       // Remove the node found
-        removingNode = Find(data, searchStartPoint);    // Find the next removing node
-    }
-
-    return *this;
+    // Remove by starting from the first node
+    return RemoveIf(data, firstPtr);
 }
 
 /**
@@ -449,6 +440,24 @@ void List<T>::Resize(const size_t newSize, const T& data)
     // Append new nodes if needed
     while(newSize > GetNodeCount())
         Append(data);
+}
+
+/**
+ * @brief Removes all but the first element from every consecutive group of equal elements in the container.
+ */
+template<class T>
+void List<T>::Unique()
+{
+    ListNode<T>* currentNode = firstPtr;
+
+    while(currentNode != nullptr)
+    {
+        // Remove all duplicates of current node
+        RemoveIf(currentNode->data, currentNode->nextPtr);
+
+        // Do it for all nodes, each time the current node will become unique
+        currentNode = currentNode->nextPtr;
+    }
 }
 
 /**
@@ -612,4 +621,29 @@ void List<T>::RemoveNode(ListNode<T>* removingNode)
         delete removingNode;    // Delete the node
         numberOfNodes--;        // Decrement node counter
     }
+}
+
+/**
+ * @brief   Removes all samples of given key.
+ * @param   data        Search key
+ * @param   beginByNode Node where the search will start from
+ * @return  lValue reference to the list to support cascaded calls
+ */
+template<class T>
+List<T>& List<T>::RemoveIf(const T& data, ListNode<T>* beginByNode)
+{
+    ListNode<T>* removingNode;      // Node to be removed
+    ListNode<T>* searchStartPoint;  // Node where the search will start again from
+
+    /* Find and remove all specified nodes until
+     * we hit the last of the list */
+    removingNode = Find(data, beginByNode);    // Find the first sample
+    while(removingNode != nullptr)
+    {
+        searchStartPoint = removingNode->nextPtr;       // Save the next node
+        RemoveNode(removingNode);                       // Remove the node found
+        removingNode = Find(data, searchStartPoint);    // Find the next removing node
+    }
+
+    return *this;
 }

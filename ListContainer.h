@@ -10,6 +10,7 @@
  *                                -> Remove function with lambda predicate added.
  *                                -> Duplicate remover function added.
  *                                -> Sort method added.
+ *              February 28, 2021 -> Emplace append and emplace prepend methods added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -30,14 +31,18 @@ public:
     List<T>& Append(const T& data);     // Add after the last node
     List<T>& Prepend(const T& data);    // Add before the first node
 
+    template <class... Args>
+    List<T>& EmplaceAppend(Args&&... args);
+    template <class... Args>
+    List<T>& EmplacePrepend(Args&&... args);
+
     const T& First() const; // Get the first data as an rValue
     const T& Last() const;  // Get the last data as an rValue
     T& First();             // Get the first data as an lValue
-    T& Last();              // Get the first data as an lValue
+    T& Last();              // Get the last data as an lValue
 
     template<class RuleT>
     List<T>& RemoveIf(RuleT Predicate);         // Remove all fulfilling the condition of predicate
-    List<T>& EraseAll();                        // Remove all elements
     List<T>& RemoveFirst();                     // Remove the first node
     List<T>& RemoveLast();                      // Remove the last node
     List<T>& RemoveIf(const T& data);           // Remove all samples of a specific data
@@ -46,6 +51,7 @@ public:
     List<T>& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
     List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
     List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
+    List<T>& EraseAll();                        // Remove all elements
 
     void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
     void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
@@ -91,6 +97,10 @@ class ListNode{
 
 public:
     ListNode(const T& data) : data(data), prevPtr(nullptr), nextPtr(nullptr)
+    { /* Empty constructor */ }
+
+    template<class... Args>
+    ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
     { /* Empty constructor */ }
 
 private:
@@ -171,6 +181,56 @@ List<T>& List<T>::Prepend(const T& data)
     return *this;
 }
 
+/**
+ * @brief   Constructs the node's data member inplace by appending it to the list
+ * @param   args    Arguments forwarded to construct the new element.
+ * @return  lValue reference to the current list to support cascades
+ */
+template<class T>
+template<class... Args>
+List<T>& List<T>::EmplaceAppend(Args&&... args)
+{
+    if(isEmpty() == true)  // If it is the first node
+    {
+        firstPtr    = new ListNode<T>(args...);    // Create the first node
+        lastPtr     = firstPtr; // The last and the first points the same node
+    }
+    else
+    {
+        lastPtr->nextPtr = new ListNode<T>(args...);    // Create and append the node
+        lastPtr->nextPtr->prevPtr = lastPtr;            // Adjust prevNode connection
+        lastPtr = lastPtr->nextPtr;                     // Update the lastPtr
+    }
+
+    numberOfNodes++;    // Increase the number of nodes
+
+    return *this;   // Support cascaded appends
+}
+/**
+ * @brief   Constructs the node's data member inplace by prepending it to the list
+ * @param   args    Arguments forwarded to construct the new element.
+ * @return  lValue reference to the current list to support cascades
+ */
+template<class T>
+template<class... Args>
+List<T>& List<T>::EmplacePrepend(Args&&... args)
+{
+    if(isEmpty() == true)   // If it is the first node
+    {
+        firstPtr    = new ListNode<T>(args...);    // Create the first node
+        lastPtr     = firstPtr; // The last and the first points the same node
+    }
+    else
+    {
+        firstPtr->prevPtr = new ListNode<T>(args...);   // Create and prepend the node
+        firstPtr->prevPtr->nextPtr = firstPtr;          // Adjust nextNode connection
+        firstPtr = firstPtr->prevPtr;                   // Update the firstPtr
+    }
+
+    numberOfNodes++;    // Increase the number of nodes
+
+    return *this;
+}
 
 /**
  * @brief   Iterator to reach to the first element.
@@ -257,18 +317,6 @@ List<T>& List<T>::RemoveIf(RuleT Predicate)
     }
 
     return *this; // Support cascaded calls
-}
-
-/**
- * @brief   Removes all nodes
- * @return  lValue reference to the empty list to support cascaded calls
- */
-template<class T>
-List<T>& List<T>::EraseAll()
-{
-    /* Remove all until the list is empty */
-    while(isEmpty() == false)
-        RemoveFirst();
 }
 
 /**
@@ -401,6 +449,18 @@ List<T>& List<T>::RemoveLastNotOf(const T& data)
     RemoveNode(FindNotOfReversed(data, lastPtr));
 
     return *this;
+}
+
+/**
+ * @brief   Removes all nodes
+ * @return  lValue reference to the empty list to support cascaded calls
+ */
+template<class T>
+List<T>& List<T>::EraseAll()
+{
+    /* Remove all until the list is empty */
+    while(isEmpty() == false)
+        RemoveFirst();
 }
 
 /**

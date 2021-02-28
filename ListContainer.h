@@ -11,6 +11,7 @@
  *                                -> Duplicate remover function added.
  *                                -> Sort method added.
  *              February 28, 2021 -> Emplace append and emplace prepend methods added.
+ *                                -> Iterator class and related functions added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -24,22 +25,44 @@ template<class T> class ListNode;
 template<class T>
 class List{
 public:
-    List(); // Constructor
-
+    /*** Constructors and Destructors ***/
+    List();             // Constructor
     virtual ~List();    // Destructor
 
-    List<T>& Append(const T& data);     // Add after the last node
-    List<T>& Prepend(const T& data);    // Add before the first node
+    /*** Iterators ***/
+    class iterator{
+    public:
+        iterator() = delete;    // There must be a node address to reach the list
+        iterator(ListNode<T>* node) : node(node) { }
 
-    template <class... Args>
-    List<T>& EmplaceAppend(Args&&... args);
-    template <class... Args>
-    List<T>& EmplacePrepend(Args&&... args);
+        void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
+        void operator++(int)    { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Postfix increment
+        void operator--()       { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Prefix decrement
+        void operator--(int)    { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Postfix decrement
 
+        T& operator*() { return node->data; }   // Dereference operator
+
+    private:
+        ListNode<T>* node = nullptr;
+    };
+
+    iterator begin() { return iterator(firstPtr);   }   // Returns an iterator pointing to the first element
+    iterator end()   { return iterator(lastPtr);    }   // Returns an iterator pointing to the last element
+
+    /*** Element Access ***/
     const T& First() const; // Get the first data as an rValue
     const T& Last() const;  // Get the last data as an rValue
     T& First();             // Get the first data as an lValue
     T& Last();              // Get the last data as an lValue
+
+    /*** Modifiers ***/
+    List<T>& Append(const T& data);     // Add after the last node
+    List<T>& Prepend(const T& data);    // Add before the first node
+
+    template <class... Args>
+    List<T>& EmplaceAppend(Args&&... args);     // Constructs the node element inplace
+    template <class... Args>
+    List<T>& EmplacePrepend(Args&&... args);    // Constructs the node element inplace
 
     template<class RuleT>
     List<T>& RemoveIf(RuleT Predicate);         // Remove all fulfilling the condition of predicate
@@ -52,14 +75,16 @@ public:
     List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
     List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
     List<T>& EraseAll();                        // Remove all elements
+    void ReplaceAllWith(const T& oldData, const T& newData);
+    void ReplaceFirstWith(const T& oldData, const T& newData);
+    void ReplaceLastWith(const T& oldData, const T& newData);
 
+    /*** Operations ***/
     void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
     void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
-    void Unique();  // Remove duplicate values
-    void Sort();    // Sorts in ascending order
-
-    bool isEmpty() const
-    { return (numberOfNodes == 0); }
+    void Unique();                                              // Remove duplicate values
+    void Sort();                                                // Sorts in ascending order
+    void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
 
     /* Declaring a function as a friend inside of a template class
        corrupts the template usage. You may want to check the holy StackOverflow :)
@@ -67,25 +92,26 @@ public:
     template<class _T>
     friend std::ostream& operator<<(std::ostream& stream, List<_T>& list);
 
-    void PrintAll(std::ostream& stream);
-
-    size_t GetNodeCount() const
-    { return numberOfNodes; }
+    /*** Capacity ***/
+    bool isEmpty() const { return (numberOfNodes == 0); }
+    size_t GetNodeCount() const { return numberOfNodes; }
 
 private:
+    /*** Searching ***/
     ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindNotOf(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindReversed(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindNotOfReversed(const T& data, ListNode<T>* beginByNode);
     ListNode<T>* FindMinimum(ListNode<T>* beginByNode);
 
-    void RemoveNode(ListNode<T>* removingNode);
-    List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);           // Remove all samples of a specific data
+    /*** Operations **/
+    void RemoveNode(ListNode<T>* removingNode);                                     // Remove a specific node
+    List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);                     // Remove all samples of a specific data
+    void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);                // Swap different nodes
+    void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);      // Swap directly linked nodes
+    void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);   // Swap indirectly linked nodes
 
-    void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
-    void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
-    void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);
-
+    /*** Members ***/
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
     ListNode<T>* lastPtr    = nullptr;  // Last node of the list
     size_t numberOfNodes    = 0;        // Node count
@@ -103,8 +129,13 @@ public:
     ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
     { /* Empty constructor */ }
 
-private:
+    // Dereference operator returns the internal data element
+    T& operator *() { return data; }
+
+    void operator++() { this = this->nextPtr; }
+
     T data;
+private:
     ListNode* prevPtr = nullptr;
     ListNode* nextPtr = nullptr;
 };
@@ -464,6 +495,56 @@ List<T>& List<T>::EraseAll()
 }
 
 /**
+ * @brief   Replaces all nodes containing the oldData with the newData
+ * @param   oldData Data key to be replaced
+ * @param   newData Replace value
+ */
+template<class T>
+void List<T>::ReplaceAllWith(const T& oldData, const T& newData)
+{
+    ListNode<T>* currentNode = firstPtr;
+
+    while(currentNode != nullptr)
+    {
+        currentNode = Find(oldData, currentNode);   // Find the key
+
+        if(currentNode != nullptr)
+        {
+            currentNode->data   = newData;              // Replace data
+            currentNode         = currentNode->nextPtr; // Pass to next node
+        }
+    }
+}
+
+/**
+ * @brief   Replaces the first node containing the oldData with the newData
+ * @param   oldData Data key to be replaced
+ * @param   newData Replace value
+ */
+template<class T>
+void List<T>::ReplaceFirstWith(const T& oldData, const T& newData)
+{
+    ListNode<T>* currentNode = Find(oldData, firstPtr);
+
+    if(currentNode != nullptr)
+        currentNode->data   = newData;              // Replace data
+}
+
+/**
+ * @brief   Replaces the last node containing the oldData with the newData
+ * @param   oldData Data key to be replaced
+ * @param   newData Replace value
+ */
+template<class T>
+void List<T>::ReplaceLastWith(const T& oldData, const T& newData)
+{
+    ListNode<T>* currentNode = FindReversed(oldData, lastPtr);
+
+    if(currentNode != nullptr)
+        currentNode->data   = newData;              // Replace data
+}
+
+/**
  * @brief   Swaps two different lists' contents.
  * @param   anotherList     List to be swapped with this.
  * @note    There is no need to make a complete swap.
@@ -548,6 +629,19 @@ void List<T>::Sort()
 }
 
 /**
+ * @brief Prints the data of all nodes
+ * @param stream    Output stream where the list will be inserted to.
+ */
+template<class T>
+void List<T>::PrintAll(std::ostream& stream) const
+{
+    for(ListNode<T>* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
+    {
+        stream << currentNode->data << " ";
+    }
+}
+
+/**
  * @brief   Output insertion overloaded to be used with a list
  * @param   stream  Output stream where the list will be inserted to.
  * @param   list    List to be inserted.
@@ -562,19 +656,6 @@ std::ostream& operator<<(std::ostream& stream, List<T>& list)
         list.PrintAll(stream);
 
     return stream; // Support cascaded streams
-}
-
-/**
- * @brief Prints the data of all nodes
- * @param stream    Output stream where the list will be inserted to.
- */
-template<class T>
-void List<T>::PrintAll(std::ostream& stream)
-{
-    for(ListNode<T>* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
-    {
-        stream << currentNode->data << " ";
-    }
 }
 
 /**

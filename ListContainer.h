@@ -29,39 +29,6 @@ public:
     List();             // Constructor
     virtual ~List();    // Destructor
 
-    /*** Iterators ***/
-    class iterator{
-    public:
-        iterator() = delete;    // There must be a node address to reach the list
-        iterator(ListNode<T>* node) : node(node)
-        { if(node == nullptr) throw std::logic_error("Iterator construction failed!"); }
-
-        void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
-        void operator++(int)    { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Postfix increment
-        void operator--()       { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Prefix decrement
-        void operator--(int)    { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Postfix decrement
-
-        T& operator*() { return node->data; }   // Dereference operator
-
-    private:
-        ListNode<T>* node = nullptr;
-    };
-
-    iterator begin()    // Returns an iterator pointing to the first element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        return iterator(firstPtr);
-    }
-    iterator end()      // Returns an iterator pointing to the last element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        return iterator(lastPtr);
-    }
-
     /*** Element Access ***/
     const T& First() const; // Get the first data as an rValue
     const T& Last() const;  // Get the last data as an rValue
@@ -99,17 +66,55 @@ public:
     void Sort();                                                // Sorts in ascending order
     void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
 
+    /*** Status Checkers ***/
+    bool isEmpty() const        { return (numberOfNodes == 0);                  }
+    size_t GetNodeCount() const { return numberOfNodes;                         }
+    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }
+
+    /*** Operator Overloadings ***/
+    bool operator==(const List<T>& anotherList) const    // Compare two lists by equality
+    { return (firstPtr == anotherList.firstPtr); }
+    bool operator!=(const List<T>& anotherList) const    // Compare two lists by inequality
+    { return !operator==(anotherList); }
+
     /* Declaring a function as a friend inside of a template class
        corrupts the template usage. You may want to check the holy StackOverflow :)
        stackoverflow.com/questions/4660123 */
     template<class _T>
     friend std::ostream& operator<<(std::ostream& stream, List<_T>& list);
 
-    /*** Status Checkers ***/
-    bool isEmpty() const        { return (numberOfNodes == 0);                  }
-    size_t GetNodeCount() const { return numberOfNodes;                         }
-    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }
+    /*** Iterators ***/
+    class iterator{
+    public:
+        iterator() = delete;    // There must be a node address to reach the list
+        iterator(ListNode<T>* node) : node(node)
+        { if(node == nullptr) throw std::logic_error("Iterator construction failed!"); }
 
+        void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
+        void operator++(int)    { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Postfix increment
+        void operator--()       { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Prefix decrement
+        void operator--(int)    { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Postfix decrement
+
+        T& operator*() { return node->data; }   // Dereference operator
+
+    private:
+        ListNode<T>* node = nullptr;
+    };
+
+    iterator begin()    // Returns an iterator pointing to the first element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        return iterator(firstPtr);
+    }
+    iterator end()      // Returns an iterator pointing to the last element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        return iterator(lastPtr);
+    }
 private:
     /*** Searching ***/
     ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
@@ -582,7 +587,7 @@ void List<T>::Swap(List<T>& anotherList)
     // Swap the first nodes of each list
     tempPtr                 = firstPtr;             // Save the firstPtr of this
     firstPtr                = anotherList.firstPtr; // Replace the firstPtr of this
-    anotherList.firstPtr    = tempPtr;             // Replace the firstPtr of the other list
+    anotherList.firstPtr    = tempPtr;              // Replace the firstPtr of the other list
 
     tempPtr                 = lastPtr;             // Save the lastPtr of this
     lastPtr                 = anotherList.lastPtr; // Replace the lastPtr of this

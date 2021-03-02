@@ -33,7 +33,8 @@ public:
     class iterator{
     public:
         iterator() = delete;    // There must be a node address to reach the list
-        iterator(ListNode<T>* node) : node(node) { }
+        iterator(ListNode<T>* node) : node(node)
+        { if(node == nullptr) throw std::logic_error("Iterator construction failed!"); }
 
         void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
         void operator++(int)    { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Postfix increment
@@ -46,8 +47,20 @@ public:
         ListNode<T>* node = nullptr;
     };
 
-    iterator begin() { return iterator(firstPtr);   }   // Returns an iterator pointing to the first element
-    iterator end()   { return iterator(lastPtr);    }   // Returns an iterator pointing to the last element
+    iterator begin()    // Returns an iterator pointing to the first element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        return iterator(firstPtr);
+    }
+    iterator end()      // Returns an iterator pointing to the last element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        return iterator(lastPtr);
+    }
 
     /*** Element Access ***/
     const T& First() const; // Get the first data as an rValue
@@ -92,9 +105,10 @@ public:
     template<class _T>
     friend std::ostream& operator<<(std::ostream& stream, List<_T>& list);
 
-    /*** Capacity ***/
-    bool isEmpty() const { return (numberOfNodes == 0); }
-    size_t GetNodeCount() const { return numberOfNodes; }
+    /*** Status Checkers ***/
+    bool isEmpty() const        { return (numberOfNodes == 0);                  }
+    size_t GetNodeCount() const { return numberOfNodes;                         }
+    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }
 
 private:
     /*** Searching ***/
@@ -129,13 +143,19 @@ public:
     ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
     { /* Empty constructor */ }
 
-    // Dereference operator returns the internal data element
-    T& operator *() { return data; }
+    bool isSorted() const
+    {
+        if(nextPtr == nullptr)
+            return true;
 
-    void operator++() { this = this->nextPtr; }
+        if(nextPtr->data < data)
+            return false;
 
-    T data;
+        return nextPtr->isSorted();
+    }
+
 private:
+    T data;
     ListNode* prevPtr = nullptr;
     ListNode* nextPtr = nullptr;
 };

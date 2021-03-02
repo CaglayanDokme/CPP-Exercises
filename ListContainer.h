@@ -12,6 +12,7 @@
  *                                -> Sort method added.
  *              February 28, 2021 -> Emplace append and emplace prepend methods added.
  *                                -> Iterator class and related functions added.
+ *              March 2, 2021     -> Merge and concatenate methods added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -65,6 +66,8 @@ public:
     void Unique();                                              // Remove duplicate values
     void Sort();                                                // Sorts in ascending order
     void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
+    void Merge(List<T>& anotherList);
+    void Concatenate(List<T>& anotherList);
 
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
@@ -115,6 +118,7 @@ public:
 
         return iterator(lastPtr);
     }
+
 private:
     /*** Searching ***/
     ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
@@ -124,11 +128,14 @@ private:
     ListNode<T>* FindMinimum(ListNode<T>* beginByNode);
 
     /*** Operations **/
+    void DetachNode(ListNode<T>* removingNode);                                     // Detaching a node from a list by not destroying the content
     void RemoveNode(ListNode<T>* removingNode);                                     // Remove a specific node
     List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);                     // Remove all samples of a specific data
     void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);                // Swap different nodes
     void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);      // Swap directly linked nodes
     void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);   // Swap indirectly linked nodes
+    void Append(ListNode<T>* baseNode, ListNode<T>* newNode);    // Appending to a certain node
+    void Prepend(ListNode<T>* baseNode, ListNode<T>* newNode);   // Prepending to a certain node
 
     /*** Members ***/
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
@@ -667,6 +674,69 @@ void List<T>::PrintAll(std::ostream& stream) const
 }
 
 /**
+ * @brief   Merges two lists into a single list.
+ * @param   anotherList List to be merged
+ * @note    The second list will be completely flushed after this operation.
+ */
+template<class T>
+void List<T>::Merge(List<T>& anotherList)
+{
+    // Both of the lists must be sorted before merging
+    if(isSorted() == false)
+        Sort(); // Sort first
+
+    if(anotherList.isSorted() == false)
+        anotherList.Sort(); // Sort first
+
+    ListNode<T> *currentNodeL1 = firstPtr, *currentNodeL2 = anotherList.firstPtr;
+
+    while(currentNodeL1 != nullptr)
+    {
+        currentNodeL2 = anotherList.firstPtr;
+        if(currentNodeL1->data > currentNodeL2->data)
+        {
+            anotherList.DetachNode(currentNodeL2);
+            Prepend(currentNodeL1, currentNodeL2);
+        }
+        else
+            currentNodeL1 = currentNodeL1->nextPtr;
+    }
+
+    // Concatenate remaining elements of other list as they are already sorted
+    if(anotherList.isEmpty() == false)
+        Concatenate(anotherList);
+}
+
+/**
+ * @brief   Concatenates another list to this one.
+ * @param   anotherList List to be concatenated.
+ */
+template<class T>
+void List<T>::Concatenate(List<T>& anotherList)
+{
+    if(anotherList.isEmpty() == true)
+        return;
+
+    if(isEmpty() == true)
+        firstPtr = anotherList.firstPtr;
+
+    // Link the first and last nodes
+    anotherList.firstPtr->prevPtr = lastPtr;
+    lastPtr->nextPtr = anotherList.firstPtr;
+
+    // Update the lastPtr of current list
+    lastPtr = anotherList.lastPtr;
+
+    // Update the node counters
+    numberOfNodes += anotherList.GetNodeCount();
+
+    // Unlink the other list without destroying the content of it
+    anotherList.firstPtr        = nullptr;
+    anotherList.lastPtr         = nullptr;
+    anotherList.numberOfNodes   = 0;
+}
+
+/**
  * @brief   Output insertion overloaded to be used with a list
  * @param   stream  Output stream where the list will be inserted to.
  * @param   list    List to be inserted.
@@ -818,6 +888,36 @@ ListNode<T>* List<T>::FindMinimum(ListNode<T>* beginByNode)
     }
 
     return minNode;
+}
+
+/**
+ * @brief   Removes a certain node from the list by not destroying the content of the node.s
+ * @param   removingNode Address of the node to be removed.
+ * @throw   std::logic_error If the list was empty.
+ */
+template<class T>
+void List<T>::DetachNode(ListNode<T>* removingNode)
+{
+    if(isEmpty() == true)
+        throw std::logic_error("Empty list cannot have any nodes!");
+
+    // Re-link the neighbour nodes
+    if(removingNode == firstPtr)
+        firstPtr = removingNode->nextPtr;
+    else
+        removingNode->prevPtr->nextPtr = removingNode->nextPtr;
+
+    if(removingNode == lastPtr)
+        lastPtr = removingNode->prevPtr;
+    else
+        removingNode->nextPtr->prevPtr = removingNode->prevPtr;
+
+    // Detach completely by removing links
+    removingNode->nextPtr = nullptr;
+    removingNode->prevPtr = nullptr;
+
+    // Decrease node count of the list
+    numberOfNodes--;
 }
 
 /**
@@ -1003,4 +1103,53 @@ void List<T>::SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* second
             secondNode->nextPtr 			= tempPtr;
         }
     }
+}
+
+/**
+ * @brief   Appends a node to a given node of the list.
+ * @param   baseNode    Node from the current list.
+ * @param   newNode     Any node to be appended.
+ * @throws  std::logic_error If any of the given nodes is NULL.
+ */
+template<class T>
+void List<T>::Append(ListNode<T>* baseNode, ListNode<T>* newNode)
+{
+    if((baseNode == nullptr) || (newNode == nullptr))
+        throw std::logic_error("Base node cannot be NULL while appending!");
+
+    // Update lastPtr if needed
+    if(baseNode == lastPtr)
+        lastPtr = newNode;
+    else
+        baseNode->nextPtr->prevPtr = newNode;
+
+    newNode->prevPtr    = baseNode;
+    newNode->nextPtr    = baseNode->nextPtr;
+    baseNode->nextPtr   = newNode;
+
+    numberOfNodes++;    // Increment node count
+}
+/**
+ * @brief   Prepends a node to a given node of the list.
+ * @param   baseNode    Node from the current list.
+ * @param   newNode     Any node to be prepended.
+ * @throws  std::logic_error If any of the given nodes is NULL.
+ */
+template<class T>
+void List<T>::Prepend(ListNode<T>* baseNode, ListNode<T>* newNode)
+{
+    if((baseNode == nullptr) || (newNode == nullptr))
+        throw std::logic_error("Base node cannot be NULL while appending!");
+
+    // Update lastPtr if needed
+    if(baseNode == firstPtr)
+        firstPtr = newNode;
+    else
+        baseNode->prevPtr->nextPtr = newNode;
+
+    newNode->nextPtr    = baseNode;
+    newNode->prevPtr    = baseNode->prevPtr;
+    baseNode->prevPtr   = newNode;
+
+    numberOfNodes++;    // Increment node count
 }

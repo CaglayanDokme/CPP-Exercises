@@ -13,6 +13,7 @@
  *              February 28, 2021 -> Emplace append and emplace prepend methods added.
  *                                -> Iterator class and related functions added.
  *              March 2, 2021     -> Merge and concatenate methods added.
+ *                                   Splice method added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.

@@ -26,6 +26,8 @@ template<class T> class ListNode;
 template<class T>
 class List{
 public:
+    class iterator; // Forward declaration
+
     /*** Constructors and Destructors ***/
     List();             // Constructor
     virtual ~List();    // Destructor
@@ -66,8 +68,9 @@ public:
     void Unique();                                              // Remove duplicate values
     void Sort();                                                // Sorts in ascending order
     void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
-    void Merge(List<T>& anotherList);
-    void Concatenate(List<T>& anotherList);
+    void Merge(List<T>& anotherList);                           // Merges two sorted list
+    void Concatenate(List<T>& anotherList);                     // Concatenates two lists
+    void Splice(const iterator& destination, List<T>& anotherList);
 
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
@@ -88,6 +91,7 @@ public:
 
     /*** Iterators ***/
     class iterator{
+        friend class List;
     public:
         iterator() = delete;    // There must be a node address to reach the list
         iterator(ListNode<T>* node) : node(node)
@@ -134,8 +138,9 @@ private:
     void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);                // Swap different nodes
     void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);      // Swap directly linked nodes
     void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);   // Swap indirectly linked nodes
-    void Append(ListNode<T>* baseNode, ListNode<T>* newNode);    // Appending to a certain node
-    void Prepend(ListNode<T>* baseNode, ListNode<T>* newNode);   // Prepending to a certain node
+    void Append(ListNode<T>* baseNode, ListNode<T>* newNode);       // Appending a node to a certain node
+    void Prepend(ListNode<T>* baseNode, ListNode<T>* newNode);      // Prepending a node to a certain node
+    void Append(ListNode<T>* baseNode, List<T>& anotherList);       // Appending a list to a certain node7
 
     /*** Members ***/
     ListNode<T>* firstPtr   = nullptr;  // First node of the list
@@ -737,6 +742,20 @@ void List<T>::Concatenate(List<T>& anotherList)
 }
 
 /**
+ * @brief   Transfers elements from other list into this list by appending them at position.
+ * @param   destination Position the append will occur.
+ * @param   anotherList Source list. It will be completely flushed.
+ */
+template<class T>
+void List<T>::Splice(const iterator& destination, List<T>& anotherList)
+{
+    if(destination.node == nullptr)
+        throw std::logic_error("Iterator had been corrupted!");
+
+    Append(destination.node, anotherList);
+}
+
+/**
  * @brief   Output insertion overloaded to be used with a list
  * @param   stream  Output stream where the list will be inserted to.
  * @param   list    List to be inserted.
@@ -745,7 +764,7 @@ void List<T>::Concatenate(List<T>& anotherList)
 template<class T>
 std::ostream& operator<<(std::ostream& stream, List<T>& list)
 {
-    if(list.isEmpty() == true)
+    if((list.isEmpty() == true) || (list.firstPtr == nullptr))
         stream << "-- empty list --";
     else
         list.PrintAll(stream);
@@ -1129,6 +1148,7 @@ void List<T>::Append(ListNode<T>* baseNode, ListNode<T>* newNode)
 
     numberOfNodes++;    // Increment node count
 }
+
 /**
  * @brief   Prepends a node to a given node of the list.
  * @param   baseNode    Node from the current list.
@@ -1152,4 +1172,42 @@ void List<T>::Prepend(ListNode<T>* baseNode, ListNode<T>* newNode)
     baseNode->prevPtr   = newNode;
 
     numberOfNodes++;    // Increment node count
+}
+
+/**
+ * @brief   Appends a list to a node of the current list
+ * @param   baseNode    Destination node
+ * @param   anotherList List to appended to
+ * @throw   std::logic_error If the destination node is NULL.
+ */
+template<class T>
+void List<T>::Append(ListNode<T>* baseNode, List<T>& anotherList)
+{
+    if(baseNode == nullptr)
+        throw std::logic_error("Base node cannot be NULL while appending!");
+
+    if(baseNode == lastPtr)
+        return Concatenate(anotherList);
+
+    if(anotherList.isEmpty() == true)
+        return;
+
+    if(isEmpty() == true)
+        return Swap(anotherList);
+
+    // Adjust new links
+    baseNode->nextPtr->prevPtr      = anotherList.lastPtr;
+    anotherList.lastPtr->nextPtr    = baseNode->nextPtr;
+
+    anotherList.firstPtr->prevPtr   = baseNode;
+    baseNode->nextPtr               = anotherList.firstPtr;
+
+    // Incremenet node counter
+    numberOfNodes += anotherList.GetNodeCount();
+
+    // Destroy old links of the other list
+    anotherList.firstPtr    = nullptr;
+    anotherList.lastPtr     = nullptr;
+    anotherList.numberOfNodes = 0;
+
 }

@@ -15,6 +15,7 @@
  *              March 2, 2021     -> Merge and concatenate methods added.
  *                                   Splice method added.
  *              March 5, 2021     -> Recursive inclusion blocker added.
+ *                                   Fill constructor added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -34,8 +35,9 @@ public:
     class iterator; // Forward declaration
 
     /*** Constructors and Destructors ***/
-    List();             // Constructor
-    virtual ~List();    // Destructor
+    List();                     // Default constructor
+    List (const size_t n);      // Construct with n nodes initally
+    virtual ~List();            // Destructor
 
     /*** Element Access ***/
     const T& First() const; // Get the first data as an rValue
@@ -189,6 +191,19 @@ template<class T>
 List<T>::List()
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 { /* Empty constructor */ }
+
+/**
+ * @brief   Constructs a container with n elements.
+ * @param   n   Size of initial construction nodes.
+ */
+template<class T>
+List<T>::List (const size_t n)
+: firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
+{
+    // Append n nodes to empty list by in place construction
+    while (GetNodeCount() < n)
+        EmplaceAppend();
+}
 
 
 /**

@@ -14,10 +14,14 @@
  *                                -> Iterator class and related functions added.
  *              March 2, 2021     -> Merge and concatenate methods added.
  *                                   Splice method added.
+ *              March 5, 2021     -> Recursive inclusion blocker added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
  */
+
+#ifndef LIST_CONTAINER_H
+#define LIST_CONTAINER_H
 
 #include <iostream>
 
@@ -1212,3 +1216,5 @@ void List<T>::Append(ListNode<T>* baseNode, List<T>& anotherList)
     anotherList.numberOfNodes = 0;
 
 }
+
+#endif  // Prevent recursive inclusion

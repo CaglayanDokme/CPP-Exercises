@@ -15,7 +15,7 @@
  *              March 2, 2021     -> Merge and concatenate methods added.
  *                                   Splice method added.
  *              March 5, 2021     -> Recursive inclusion blocker added.
- *                                   Fill constructor added.
+ *                                   Fill constructor added with two versions.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -37,6 +37,10 @@ public:
     /*** Constructors and Destructors ***/
     List();                     // Default constructor
     List (const size_t n);      // Construct with n nodes initally
+
+    template<class... Args>
+    List(const size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
+
     virtual ~List();            // Destructor
 
     /*** Element Access ***/
@@ -56,6 +60,7 @@ public:
 
     template<class RuleT>
     List<T>& RemoveIf(RuleT Predicate);         // Remove all fulfilling the condition of predicate
+
     List<T>& RemoveFirst();                     // Remove the first node
     List<T>& RemoveLast();                      // Remove the last node
     List<T>& RemoveIf(const T& data);           // Remove all samples of a specific data
@@ -193,7 +198,7 @@ List<T>::List()
 { /* Empty constructor */ }
 
 /**
- * @brief   Constructs a container with n elements.
+ * @brief   Constructs a container with n elements initially.
  * @param   n   Size of initial construction nodes.
  */
 template<class T>
@@ -205,6 +210,19 @@ List<T>::List (const size_t n)
         EmplaceAppend();
 }
 
+/**
+ * @brief   Constructs a container with n elements initially using the given arguments.
+ * @param   n       Size of initial construction nodes.
+ * @param   args    Construction arguments for initial nodes.
+ */
+template<class T>
+template<class... Args>
+List<T>::List(const size_t n, Args&&... args)
+{
+    // Append n nodes to empty list by in place construction
+    while (GetNodeCount() < n)
+        EmplaceAppend(args...);
+}
 
 /**
  * @brief Destroys all nodes one by one

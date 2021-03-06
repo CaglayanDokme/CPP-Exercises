@@ -19,6 +19,7 @@
  *              March 6, 2021     -> Range constructor added.
  *                                   Copy constructor added.
  *                                   Move constructor added.
+ *                                   Initializer list constructor added.
  *                                   Equality and inequality operator overloaded for iterator class.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
@@ -48,8 +49,9 @@ public:
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
-    List(List<T>& anotherList);         // Copy constructor
-    List(List<T>&& anotherList);        // Move constructor
+    List(List<T>& anotherList);                     // Copy constructor
+    List(List<T>&& anotherList);                    // Move constructor
+    List(std::initializer_list<T> initializerList); // Initializer list constructor
 
     virtual ~List();            // Destructor
 
@@ -307,6 +309,19 @@ List<T>::List(List<T>&& anotherList)
     anotherList.firstPtr        = nullptr;
     anotherList.lastPtr         = nullptr;
     anotherList.numberOfNodes   = 0;
+}
+
+/**
+ * @brief   Construction with initializer list
+ * @param   initializerList   Initializer list
+ */
+template<class T>
+List<T>::List(std::initializer_list<T> initializerList)
+: firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
+{
+    // Append each element by using a range-for
+    for(const T& element : initializerList)
+        Append(element);
 }
 
 /**

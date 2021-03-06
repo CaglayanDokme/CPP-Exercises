@@ -46,6 +46,8 @@ public:
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
+    List(List<T>& anotherList);   // Copy constructor
+
     virtual ~List();            // Destructor
 
     /*** Element Access ***/
@@ -229,6 +231,7 @@ List<T>::List (const size_t n)
 template<class T>
 template<class... Args>
 List<T>::List(const size_t n, Args&&... args)
+: firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append n nodes to empty list by in place construction
     while (GetNodeCount() < n)
@@ -247,6 +250,7 @@ List<T>::List(const size_t n, Args&&... args)
 template<class T>
 template<class AnotherIteratorType>
 List<T>::List(AnotherIteratorType begin, AnotherIteratorType end)
+: firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     AnotherIteratorType tempIt = begin;
 
@@ -259,6 +263,28 @@ List<T>::List(AnotherIteratorType begin, AnotherIteratorType end)
             tempIt++;
         else
             break;
+    }
+}
+
+/**
+ * @brief   Constructs a list with a copy of each of the elements from another list, in the same order.
+ * @param   anotherList List to be copied from.
+ * @note    If you want to copy another type of list, you shall use the range constructor.
+ */
+template<class T>
+List<T>::List(List<T>& anotherList)
+: firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
+{
+    if(anotherList.isEmpty() == true)
+        return;
+
+    List<T>::iterator it = anotherList.begin();
+
+    // Copy all elements one by one
+    while(numberOfNodes != anotherList.GetNodeCount())
+    {
+        Append(*it);
+        it++;
     }
 }
 

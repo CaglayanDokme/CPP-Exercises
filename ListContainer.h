@@ -17,6 +17,8 @@
  *              March 5, 2021     -> Recursive inclusion blocker added.
  *                                   Fill constructor added with two versions.
  *              March 6, 2021     -> Range constructor added.
+ *                                   Copy constructor added.
+ *                                   Move constructor added.
  *                                   Equality and inequality operator overloaded for iterator class.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
@@ -46,7 +48,8 @@ public:
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
-    List(List<T>& anotherList);   // Copy constructor
+    List(List<T>& anotherList);         // Copy constructor
+    List(List<T>&& anotherList);        // Move constructor
 
     virtual ~List();            // Destructor
 
@@ -286,6 +289,24 @@ List<T>::List(List<T>& anotherList)
         Append(*it);
         it++;
     }
+}
+
+/**
+ * @brief   Move constructor, steals the resources of the given list.
+ * @param   anotherList Locally created constant source list.
+ * @note    It is recommendded to use the std::mode for the input list.
+ */
+template<class T>
+List<T>::List(List<T>&& anotherList)
+: firstPtr(anotherList.firstPtr), lastPtr(anotherList.lastPtr), numberOfNodes(anotherList.GetNodeCount())
+{
+    /* No need to make an element wised copy as the source is
+       a locally created list container. Assigning nullptr
+       to the source container prevents destroying its content as
+       we used its resources to construct the new one. */
+    anotherList.firstPtr        = nullptr;
+    anotherList.lastPtr         = nullptr;
+    anotherList.numberOfNodes   = 0;
 }
 
 /**

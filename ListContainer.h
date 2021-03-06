@@ -16,6 +16,8 @@
  *                                   Splice method added.
  *              March 5, 2021     -> Recursive inclusion blocker added.
  *                                   Fill constructor added with two versions.
+ *              March 6, 2021     -> Range constructor added.
+ *                                   Equality and inequality operator overloaded for iterator class.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -40,6 +42,9 @@ public:
 
     template<class... Args>
     List(const size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
+
+    template<class AnotherIteratorType>
+    List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
     virtual ~List();            // Destructor
 
@@ -87,7 +92,7 @@ public:
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
     size_t GetNodeCount() const { return numberOfNodes;                         }
-    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }
+    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
 
     /*** Operator Overloadings ***/
     bool operator==(const List<T>& anotherList) const    // Compare two lists by equality
@@ -115,6 +120,8 @@ public:
         void operator--(int)    { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Postfix decrement
 
         T& operator*() { return node->data; }   // Dereference operator
+        bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
+        bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
 
     private:
         ListNode<T>* node = nullptr;
@@ -127,11 +134,14 @@ public:
 
         return iterator(firstPtr);
     }
+
     iterator end()      // Returns an iterator pointing to the last element
     {
         if(isEmpty() == true)
             throw std::logic_error("Cannot iterate in an empty list!");
 
+        /* IMPORTANT NOTE:  Unlike the STL's end, this end function returns an iterator
+                            starting from the last node of the list. So, be careful :) */
         return iterator(lastPtr);
     }
 
@@ -172,6 +182,7 @@ public:
     ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
     { /* Empty constructor */ }
 
+    // Recursively checks the status of each node
     bool isSorted() const
     {
         if(nextPtr == nullptr)
@@ -222,6 +233,33 @@ List<T>::List(const size_t n, Args&&... args)
     // Append n nodes to empty list by in place construction
     while (GetNodeCount() < n)
         EmplaceAppend(args...);
+}
+
+/**
+ * @brief   Constructs a container with as many elements as the range [begin, end),
+ *          with each element emplace-constructed from its corresponding element in that range, in the same order.
+ * @param   begin   Input iterator to the initial position in a range.
+ * @param   end     Input iterator to the final position in a range.
+ * @note    The begin iterator must placed prior to the end iterator.
+ * @note    Template used for iterator type because the user may want to copy the items of a different type of container.
+ *          Here is where the idea comes from : stackoverflow.com/questions/30121228
+ */
+template<class T>
+template<class AnotherIteratorType>
+List<T>::List(AnotherIteratorType begin, AnotherIteratorType end)
+{
+    AnotherIteratorType tempIt = begin;
+
+    // Append all nodes in the range by copying its data members
+    while (true)
+    {
+        EmplaceAppend(*tempIt);     // Append by inplace construction
+
+        if(tempIt != end)   // Continue until the last one is appended
+            tempIt++;
+        else
+            break;
+    }
 }
 
 /**

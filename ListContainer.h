@@ -91,14 +91,13 @@ public:
     void ReplaceLastWith(const T& oldData, const T& newData);
 
     /*** Operations ***/
-    void Swap(List& anotherList);                            // Exchanges the content of the list by the content of another list
-    void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
-    void Unique();                                              // Remove duplicate values
-    void Sort();                                                // Sorts in ascending order
-    void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
-    void Merge(List& anotherList);                           // Merges two sorted list
-    void Concatenate(List& anotherList);                     // Concatenates two lists
-    void Splice(const iterator& destination, List& anotherList);
+    void Swap(List& anotherList);                                   // Exchanges the content of the list by the content of another list
+    void Resize(const size_t newSize, const T& data = 0);           // Resizes the list so that it contains newSize of elements
+    void MakeUnique();                                              // Remove duplicate values
+    void Sort();                                                    // Sorts in ascending order
+    void Merge(List& anotherList);                                  // Merges two sorted list
+    void Concatenate(List& anotherList);                            // Concatenates two lists
+    void Splice(const iterator& destination, List& anotherList);    // Transferring all elements from another list
 
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
@@ -142,6 +141,7 @@ public:
     public:
         const_iterator() = delete;
         const_iterator(ListNode* node) : iterator (node) { /* Empty constructor */ }
+        const_iterator(iterator& it) : iterator(it) { }
 
         // Dereference operator returns constant reference to make the data non-assignable
         const T& operator*() { return this->node->data; }
@@ -801,7 +801,7 @@ void List<T>::Resize(const size_t newSize, const T& data)
  * @brief Removes all but the first element from every consecutive group of equal elements in the container.
  */
 template<class T>
-void List<T>::Unique()
+void List<T>::MakeUnique()
 {
     ListNode* currentNode = firstPtr;
 
@@ -831,19 +831,6 @@ void List<T>::Sort()
         minNode = FindMinimum(swapNode);    // Find the minimum node of the list after (including)swap node
         SwapNodes(minNode, swapNode);       // Swap the minimum node and swapNode
         swapNode = minNode->nextPtr;        // Continue from the next node
-    }
-}
-
-/**
- * @brief Prints the data of all nodes
- * @param stream    Output stream where the list will be inserted to.
- */
-template<class T>
-void List<T>::PrintAll(std::ostream& stream) const
-{
-    for(ListNode* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
-    {
-        stream << currentNode->data << " ";
     }
 }
 
@@ -911,7 +898,7 @@ void List<T>::Concatenate(List<T>& anotherList)
 }
 
 /**
- * @brief   Transfers elements from other list into this list by appending them at position.
+ * @brief   Transfers elements from another list into this list by appending them at position.
  * @param   destination Position the append will occur.
  * @param   anotherList Source list. It will be completely flushed.
  */
@@ -936,7 +923,19 @@ std::ostream& operator<<(std::ostream& stream, List<T>& list)
     if((list.isEmpty() == true) || (list.firstPtr == nullptr))
         stream << "-- empty list --";
     else
-        list.PrintAll(stream);
+    {
+        typename List<T>::const_iterator it = list.cbegin();
+
+        while(true)
+        {
+            stream << *it << " ";
+
+            if(it != list.cend())
+                it++;
+            else
+                break;
+        }
+    }
 
     return stream; // Support cascaded streams
 }

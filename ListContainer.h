@@ -71,7 +71,7 @@ public:
     List<T>& EmplacePrepend(Args&&... args);    // Constructs the node element inplace
 
     template<class RuleT>
-    List<T>& RemoveIf(RuleT Predicate);         // Remove all fulfilling the condition of predicate
+    List<T>& RemoveIf(const RuleT& Predicate);         // Remove all fulfilling the condition of predicate
 
     List<T>& RemoveFirst();                     // Remove the first node
     List<T>& RemoveLast();                      // Remove the last node
@@ -508,7 +508,7 @@ T& List<T>::Last()
  */
 template<class T>
 template<class RuleT>
-List<T>& List<T>::RemoveIf(RuleT Predicate)
+List<T>& List<T>::RemoveIf(const RuleT& Predicate)
 {
     ListNode<T> *currentNode = firstPtr, *tempNode;
 
@@ -667,6 +667,8 @@ List<T>& List<T>::EraseAll()
     /* Remove all until the list is empty */
     while(isEmpty() == false)
         RemoveFirst();
+
+    return *this;
 }
 
 /**

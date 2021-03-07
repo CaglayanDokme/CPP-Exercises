@@ -50,7 +50,7 @@ public:
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
-    List(List<T>& anotherList);                     // Copy constructor
+    List(const List<T>& anotherList);                     // Copy constructor
     List(List<T>&& anotherList);                    // Move constructor
     List(std::initializer_list<T> initializerList); // Initializer list constructor
 
@@ -144,7 +144,7 @@ public:
         const T& operator*() { return this->node->data; }
     };
 
-    const_iterator cbegin()     // Returns a const iterator pointing to the first element
+    const_iterator cbegin() const    // Returns a const iterator pointing to the first element
     {
         if(isEmpty() == true)
             throw std::logic_error("Cannot iterate in an empty list!");
@@ -152,7 +152,7 @@ public:
         return const_iterator(firstPtr);
     }
 
-    const_iterator cend()      // Returns a const iterator pointing to the last element
+    const_iterator cend() const     // Returns a const iterator pointing to the last element
     {
         if(isEmpty() == true)
             throw std::logic_error("Cannot iterate in an empty list!");
@@ -305,13 +305,13 @@ List<T>::List(AnotherIteratorType begin, AnotherIteratorType end)
  * @note    If you want to copy another type of list, you shall use the range constructor.
  */
 template<class T>
-List<T>::List(List<T>& anotherList)
+List<T>::List(const List<T>& anotherList)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     if(anotherList.isEmpty() == true)
         return;
 
-    List<T>::iterator it = anotherList.begin();
+    List<T>::const_iterator it = anotherList.cbegin();
 
     // Copy all elements one by one
     while(numberOfNodes != anotherList.GetNodeCount())

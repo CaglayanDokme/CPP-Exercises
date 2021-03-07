@@ -21,6 +21,7 @@
  *                                   Move constructor added.
  *                                   Initializer list constructor added.
  *                                   Equality and inequality operator overloaded for iterator class.
+ *              March 7, 2021     -> const_iterator class added for non-assignable data reference.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -130,9 +131,36 @@ public:
         bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
         bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
 
-    private:
+    protected:
         ListNode<T>* node = nullptr;
     };
+
+    class const_iterator : public iterator{
+    public:
+        const_iterator() = delete;
+        const_iterator(ListNode<T>* node) : iterator (node) { /* Empty constructor */ }
+
+        // Dereference operator returns constant reference to make the data non-assignable
+        const T& operator*() { return this->node->data; }
+    };
+
+    const_iterator cbegin()     // Returns a const iterator pointing to the first element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        return const_iterator(firstPtr);
+    }
+
+    const_iterator cend()      // Returns a const iterator pointing to the last element
+    {
+        if(isEmpty() == true)
+            throw std::logic_error("Cannot iterate in an empty list!");
+
+        /* IMPORTANT NOTE:  Unlike the STL's end, this end function returns a const iterator
+                            starting from the last node of the list. So, be careful :) */
+        return const_iterator(lastPtr);
+    }
 
     iterator begin()    // Returns an iterator pointing to the first element
     {

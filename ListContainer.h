@@ -361,8 +361,7 @@ template<class T>
 List<T>::~List()
 {
     /* Destroy all nodes until there is no node left. */
-    while(isEmpty() == false)
-        RemoveFirst();
+    EraseAll();
 }
 
 

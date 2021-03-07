@@ -29,7 +29,7 @@
 #ifndef LIST_CONTAINER_H
 #define LIST_CONTAINER_H
 
-#include <iostream>
+#include <ostream>
 
 // Forward declaration
 template<class T> class ListNode;
@@ -1347,7 +1347,6 @@ void List<T>::Append(ListNode<T>* baseNode, List<T>& anotherList)
     anotherList.firstPtr    = nullptr;
     anotherList.lastPtr     = nullptr;
     anotherList.numberOfNodes = 0;
-
 }
 
 #endif  // Prevent recursive inclusion

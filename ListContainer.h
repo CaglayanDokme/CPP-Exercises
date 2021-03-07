@@ -45,7 +45,7 @@ public:
 
     /*** Constructors and Destructors ***/
     List();                     // Default constructor
-    List (const size_t n);      // Construct with n nodes initally
+    List(const size_t n);       // Construct with n nodes initally
 
     template<class... Args>
     List(const size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
@@ -53,9 +53,9 @@ public:
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
 
-    List(const List<T>& anotherList);                     // Copy constructor
-    List(List<T>&& anotherList);                    // Move constructor
-    List(std::initializer_list<T> initializerList); // Initializer list constructor
+    List(const List& anotherList);                      // Copy constructor
+    List(List&& anotherList);                           // Move constructor
+    List(std::initializer_list<T> initializerList);     // Initializer list constructor
 
     virtual ~List();            // Destructor
 
@@ -66,39 +66,39 @@ public:
     T& Last();              // Get the last data as an lValue
 
     /*** Modifiers ***/
-    List<T>& Append(const T& data);     // Add after the last node
-    List<T>& Prepend(const T& data);    // Add before the first node
+    List& Append(const T& data);     // Add after the last node
+    List& Prepend(const T& data);    // Add before the first node
 
     template <class... Args>
-    List<T>& EmplaceAppend(Args&&... args);     // Constructs the node element inplace
+    List& EmplaceAppend(Args&&... args);     // Constructs the node element inplace
     template <class... Args>
-    List<T>& EmplacePrepend(Args&&... args);    // Constructs the node element inplace
+    List& EmplacePrepend(Args&&... args);    // Constructs the node element inplace
 
     template<class RuleT>
-    List<T>& RemoveIf(const RuleT& Predicate);         // Remove all fulfilling the condition of predicate
+    List& RemoveIf(const RuleT& Predicate);         // Remove all fulfilling the condition of predicate
 
-    List<T>& RemoveFirst();                     // Remove the first node
-    List<T>& RemoveLast();                      // Remove the last node
-    List<T>& RemoveIf(const T& data);           // Remove all samples of a specific data
-    List<T>& RemoveFirstOf(const T& data);      // Remove the first sample of a specific data
-    List<T>& RemoveLastOf(const T& data);       // Remove the last sample of a specific data
-    List<T>& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
-    List<T>& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
-    List<T>& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
-    List<T>& EraseAll();                        // Remove all elements
+    List& RemoveFirst();                     // Remove the first node
+    List& RemoveLast();                      // Remove the last node
+    List& RemoveIf(const T& data);           // Remove all samples of a specific data
+    List& RemoveFirstOf(const T& data);      // Remove the first sample of a specific data
+    List& RemoveLastOf(const T& data);       // Remove the last sample of a specific data
+    List& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
+    List& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
+    List& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
+    List& EraseAll();                        // Remove all elements
     void ReplaceAllWith(const T& oldData, const T& newData);
     void ReplaceFirstWith(const T& oldData, const T& newData);
     void ReplaceLastWith(const T& oldData, const T& newData);
 
     /*** Operations ***/
-    void Swap(List<T>& anotherList);                            // Exchanges the content of the list by the content of another list
+    void Swap(List& anotherList);                            // Exchanges the content of the list by the content of another list
     void Resize(const size_t newSize, const T& data = 0);       // Resizes the list so that it contains newSize of elements
     void Unique();                                              // Remove duplicate values
     void Sort();                                                // Sorts in ascending order
     void PrintAll(std::ostream& stream) const;                  // Prints all elements by inserting to the given stream
-    void Merge(List<T>& anotherList);                           // Merges two sorted list
-    void Concatenate(List<T>& anotherList);                     // Concatenates two lists
-    void Splice(const iterator& destination, List<T>& anotherList);
+    void Merge(List& anotherList);                           // Merges two sorted list
+    void Concatenate(List& anotherList);                     // Concatenates two lists
+    void Splice(const iterator& destination, List& anotherList);
 
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
@@ -106,9 +106,9 @@ public:
     bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
 
     /*** Operator Overloadings ***/
-    bool operator==(const List<T>& anotherList) const    // Compare two lists by equality
+    bool operator==(const List& anotherList) const    // Compare two lists by equality
     { return (firstPtr == anotherList.firstPtr); }
-    bool operator!=(const List<T>& anotherList) const    // Compare two lists by inequality
+    bool operator!=(const List& anotherList) const    // Compare two lists by inequality
     { return !operator==(anotherList); }
 
     /* Declaring a function as a friend inside of a template class
@@ -194,13 +194,13 @@ private:
     /*** Operations **/
     void DetachNode(ListNode* removingNode);                                    // Detaching a node from a list by not destroying the content
     void RemoveNode(ListNode* removingNode);                                    // Remove a specific node
-    List<T>& RemoveIf(const T& data, ListNode* beginByNode);                    // Remove all samples of a specific data
+    List& RemoveIf(const T& data, ListNode* beginByNode);                    // Remove all samples of a specific data
     void SwapNodes(ListNode* firstNode, ListNode* secondNode);                  // Swap different nodes
     void SwapSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);        // Swap directly linked nodes
     void SwapNonSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);     // Swap indirectly linked nodes
     void Append(ListNode* baseNode, ListNode* newNode);                         // Appending a node to a certain node
     void Prepend(ListNode* baseNode, ListNode* newNode);                        // Prepending a node to a certain node
-    void Append(ListNode* baseNode, List<T>& anotherList);                      // Appending a list to a certain node7
+    void Append(ListNode* baseNode, List& anotherList);                      // Appending a list to a certain node7
 
     /*** Members ***/
     ListNode* firstPtr   = nullptr;  // First node of the list
@@ -208,7 +208,7 @@ private:
     size_t numberOfNodes    = 0;        // Node count
 
     class ListNode{
-        friend class List<T>;
+        friend class List;
 
     public:
         ListNode(const T& data) : data(data), prevPtr(nullptr), nextPtr(nullptr)

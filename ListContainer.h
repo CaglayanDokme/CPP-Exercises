@@ -27,18 +27,21 @@
  *  @copyright  No copyright. Code is open source.
  */
 
+/** Recursive inclusion preventer **/
 #ifndef LIST_CONTAINER_H
 #define LIST_CONTAINER_H
 
+/** Libraries **/
 #include <ostream>
-
-// Forward declaration
-template<class T> class ListNode;
 
 template<class T>
 class List{
+    /** Forward declarations **/
+    class ListNode;
 public:
-    class iterator; // Forward declaration
+    /** Forward declarations **/
+    class iterator;
+    class const_iterator;
 
     /*** Constructors and Destructors ***/
     List();                     // Default constructor
@@ -119,7 +122,7 @@ public:
         friend class List;
     public:
         iterator() = delete;    // There must be a node address to reach the list
-        iterator(ListNode<T>* node) : node(node)
+        iterator(ListNode* node) : node(node)
         { if(node == nullptr) throw std::logic_error("Iterator construction failed!"); }
 
         void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
@@ -132,13 +135,13 @@ public:
         bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
 
     protected:
-        ListNode<T>* node = nullptr;
+        ListNode* node = nullptr;
     };
 
     class const_iterator : public iterator{
     public:
         const_iterator() = delete;
-        const_iterator(ListNode<T>* node) : iterator (node) { /* Empty constructor */ }
+        const_iterator(ListNode* node) : iterator (node) { /* Empty constructor */ }
 
         // Dereference operator returns constant reference to make the data non-assignable
         const T& operator*() { return this->node->data; }
@@ -182,57 +185,56 @@ public:
 
 private:
     /*** Searching ***/
-    ListNode<T>* Find(const T& data, ListNode<T>* beginByNode);
-    ListNode<T>* FindNotOf(const T& data, ListNode<T>* beginByNode);
-    ListNode<T>* FindReversed(const T& data, ListNode<T>* beginByNode);
-    ListNode<T>* FindNotOfReversed(const T& data, ListNode<T>* beginByNode);
-    ListNode<T>* FindMinimum(ListNode<T>* beginByNode);
+    ListNode* Find(const T& data, ListNode* beginByNode);
+    ListNode* FindNotOf(const T& data, ListNode* beginByNode);
+    ListNode* FindReversed(const T& data, ListNode* beginByNode);
+    ListNode* FindNotOfReversed(const T& data, ListNode* beginByNode);
+    ListNode* FindMinimum(ListNode* beginByNode);
 
     /*** Operations **/
-    void DetachNode(ListNode<T>* removingNode);                                     // Detaching a node from a list by not destroying the content
-    void RemoveNode(ListNode<T>* removingNode);                                     // Remove a specific node
-    List<T>& RemoveIf(const T& data, ListNode<T>* beginByNode);                     // Remove all samples of a specific data
-    void SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);                // Swap different nodes
-    void SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);      // Swap directly linked nodes
-    void SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode);   // Swap indirectly linked nodes
-    void Append(ListNode<T>* baseNode, ListNode<T>* newNode);       // Appending a node to a certain node
-    void Prepend(ListNode<T>* baseNode, ListNode<T>* newNode);      // Prepending a node to a certain node
-    void Append(ListNode<T>* baseNode, List<T>& anotherList);       // Appending a list to a certain node7
+    void DetachNode(ListNode* removingNode);                                    // Detaching a node from a list by not destroying the content
+    void RemoveNode(ListNode* removingNode);                                    // Remove a specific node
+    List<T>& RemoveIf(const T& data, ListNode* beginByNode);                    // Remove all samples of a specific data
+    void SwapNodes(ListNode* firstNode, ListNode* secondNode);                  // Swap different nodes
+    void SwapSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);        // Swap directly linked nodes
+    void SwapNonSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);     // Swap indirectly linked nodes
+    void Append(ListNode* baseNode, ListNode* newNode);                         // Appending a node to a certain node
+    void Prepend(ListNode* baseNode, ListNode* newNode);                        // Prepending a node to a certain node
+    void Append(ListNode* baseNode, List<T>& anotherList);                      // Appending a list to a certain node7
 
     /*** Members ***/
-    ListNode<T>* firstPtr   = nullptr;  // First node of the list
-    ListNode<T>* lastPtr    = nullptr;  // Last node of the list
+    ListNode* firstPtr   = nullptr;  // First node of the list
+    ListNode* lastPtr    = nullptr;  // Last node of the list
     size_t numberOfNodes    = 0;        // Node count
-};
 
-template<class T>
-class ListNode{
-    friend class List<T>;
+    class ListNode{
+        friend class List<T>;
 
-public:
-    ListNode(const T& data) : data(data), prevPtr(nullptr), nextPtr(nullptr)
-    { /* Empty constructor */ }
+    public:
+        ListNode(const T& data) : data(data), prevPtr(nullptr), nextPtr(nullptr)
+        { /* Empty constructor */ }
 
-    template<class... Args>
-    ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
-    { /* Empty constructor */ }
+        template<class... Args>
+        ListNode(Args&&... args): data(args...), prevPtr(nullptr), nextPtr(nullptr)
+        { /* Empty constructor */ }
 
-    // Recursively checks the status of each node
-    bool isSorted() const
-    {
-        if(nextPtr == nullptr)
-            return true;
+        // Recursively checks the status of each node
+        bool isSorted() const
+        {
+            if(nextPtr == nullptr)
+                return true;
 
-        if(nextPtr->data < data)
-            return false;
+            if(nextPtr->data < data)
+                return false;
 
-        return nextPtr->isSorted();
-    }
+            return nextPtr->isSorted();
+        }
 
-private:
-    T data;
-    ListNode* prevPtr = nullptr;
-    ListNode* nextPtr = nullptr;
+    private:
+        T data;
+        ListNode* prevPtr = nullptr;
+        ListNode* nextPtr = nullptr;
+    };
 };
 
 /**
@@ -374,12 +376,12 @@ List<T>& List<T>::Append(const T& data)
 {
     if(isEmpty() == true)  // If it is the first node
     {
-        firstPtr    = new ListNode<T>(data);    // Create the first node
+        firstPtr    = new ListNode(data);    // Create the first node
         lastPtr     = firstPtr; // The last and the first points the same node
     }
     else
     {
-        lastPtr->nextPtr = new ListNode<T>(data);   // Create and append the node
+        lastPtr->nextPtr = new ListNode(data);   // Create and append the node
         lastPtr->nextPtr->prevPtr = lastPtr;        // Adjust prevNode connection
         lastPtr = lastPtr->nextPtr;                 // Update the lastPtr
     }
@@ -400,12 +402,12 @@ List<T>& List<T>::Prepend(const T& data)
 {
     if(isEmpty() == true)   // If it is the first node
     {
-        firstPtr    = new ListNode<T>(data);    // Create the first node
+        firstPtr    = new ListNode(data);    // Create the first node
         lastPtr     = firstPtr; // The last and the first points the same node
     }
     else
     {
-        firstPtr->prevPtr = new ListNode<T>(data);  // Create and prepend the node
+        firstPtr->prevPtr = new ListNode(data);  // Create and prepend the node
         firstPtr->prevPtr->nextPtr = firstPtr;      // Adjust nextNode connection
         firstPtr = firstPtr->prevPtr;               // Update the firstPtr
     }
@@ -426,12 +428,12 @@ List<T>& List<T>::EmplaceAppend(Args&&... args)
 {
     if(isEmpty() == true)  // If it is the first node
     {
-        firstPtr    = new ListNode<T>(args...);    // Create the first node
+        firstPtr    = new ListNode(args...);    // Create the first node
         lastPtr     = firstPtr; // The last and the first points the same node
     }
     else
     {
-        lastPtr->nextPtr = new ListNode<T>(args...);    // Create and append the node
+        lastPtr->nextPtr = new ListNode(args...);    // Create and append the node
         lastPtr->nextPtr->prevPtr = lastPtr;            // Adjust prevNode connection
         lastPtr = lastPtr->nextPtr;                     // Update the lastPtr
     }
@@ -451,12 +453,12 @@ List<T>& List<T>::EmplacePrepend(Args&&... args)
 {
     if(isEmpty() == true)   // If it is the first node
     {
-        firstPtr    = new ListNode<T>(args...);    // Create the first node
+        firstPtr    = new ListNode(args...);    // Create the first node
         lastPtr     = firstPtr; // The last and the first points the same node
     }
     else
     {
-        firstPtr->prevPtr = new ListNode<T>(args...);   // Create and prepend the node
+        firstPtr->prevPtr = new ListNode(args...);   // Create and prepend the node
         firstPtr->prevPtr->nextPtr = firstPtr;          // Adjust nextNode connection
         firstPtr = firstPtr->prevPtr;                   // Update the firstPtr
     }
@@ -538,7 +540,7 @@ template<class T>
 template<class RuleT>
 List<T>& List<T>::RemoveIf(const RuleT& Predicate)
 {
-    ListNode<T> *currentNode = firstPtr, *tempNode;
+    ListNode *currentNode = firstPtr, *tempNode;
 
     while(currentNode != nullptr)
     {
@@ -562,7 +564,7 @@ List<T>& List<T>::RemoveFirst()
 {
     if(isEmpty() == false)
     {
-        ListNode<T>* tempPtr = firstPtr;    // Save removing node addresss
+        ListNode* tempPtr = firstPtr;    // Save removing node addresss
         firstPtr = firstPtr->nextPtr;       // Update firstPtr
         delete tempPtr;                     // Delete saved firstPtr
         numberOfNodes--;                    // Decrement node count
@@ -583,7 +585,7 @@ List<T>& List<T>::RemoveLast()
 {
     if(isEmpty() == false)
     {
-        ListNode<T>* tempPtr = lastPtr;     // Save removing node addresss
+        ListNode* tempPtr = lastPtr;     // Save removing node addresss
         lastPtr = lastPtr->prevPtr;         // Update lastPtr
         delete tempPtr;                     // Delete saved lastPtr
         numberOfNodes--;                    // Decrement node count
@@ -641,8 +643,8 @@ List<T>& List<T>::RemoveLastOf(const T& data)
 template<class T>
 List<T>& List<T>::RemoveIfNot(const T& data)
 {
-    ListNode<T>* removingNode;      // Node to be removed
-    ListNode<T>* searchStartPoint;  // Node where the search will start
+    ListNode* removingNode;      // Node to be removed
+    ListNode* searchStartPoint;  // Node where the search will start
 
     /* Find and remove all inequal nodes until
      * we hit the last of the list */
@@ -707,7 +709,7 @@ List<T>& List<T>::EraseAll()
 template<class T>
 void List<T>::ReplaceAllWith(const T& oldData, const T& newData)
 {
-    ListNode<T>* currentNode = firstPtr;
+    ListNode* currentNode = firstPtr;
 
     while(currentNode != nullptr)
     {
@@ -729,7 +731,7 @@ void List<T>::ReplaceAllWith(const T& oldData, const T& newData)
 template<class T>
 void List<T>::ReplaceFirstWith(const T& oldData, const T& newData)
 {
-    ListNode<T>* currentNode = Find(oldData, firstPtr);
+    ListNode* currentNode = Find(oldData, firstPtr);
 
     if(currentNode != nullptr)
         currentNode->data   = newData;              // Replace data
@@ -743,7 +745,7 @@ void List<T>::ReplaceFirstWith(const T& oldData, const T& newData)
 template<class T>
 void List<T>::ReplaceLastWith(const T& oldData, const T& newData)
 {
-    ListNode<T>* currentNode = FindReversed(oldData, lastPtr);
+    ListNode* currentNode = FindReversed(oldData, lastPtr);
 
     if(currentNode != nullptr)
         currentNode->data   = newData;              // Replace data
@@ -761,7 +763,7 @@ void List<T>::Swap(List<T>& anotherList)
     if(*this == anotherList)
         return;     // Self swap is not required
 
-    ListNode<T>* tempPtr;
+    ListNode* tempPtr;
     size_t tempSize;
 
     // Swap the first nodes of each list
@@ -802,7 +804,7 @@ void List<T>::Resize(const size_t newSize, const T& data)
 template<class T>
 void List<T>::Unique()
 {
-    ListNode<T>* currentNode = firstPtr;
+    ListNode* currentNode = firstPtr;
 
     while(currentNode != nullptr)
     {
@@ -824,7 +826,7 @@ void List<T>::Sort()
     if((isEmpty() == true) || (firstPtr == lastPtr))
         return;
 
-    ListNode<T> *minNode, *swapNode = firstPtr;
+    ListNode *minNode, *swapNode = firstPtr;
     while (swapNode != nullptr)
     {
         minNode = FindMinimum(swapNode);    // Find the minimum node of the list after (including)swap node
@@ -840,7 +842,7 @@ void List<T>::Sort()
 template<class T>
 void List<T>::PrintAll(std::ostream& stream) const
 {
-    for(ListNode<T>* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
+    for(ListNode* currentNode = firstPtr; currentNode != nullptr; currentNode = currentNode->nextPtr)
     {
         stream << currentNode->data << " ";
     }
@@ -861,7 +863,7 @@ void List<T>::Merge(List<T>& anotherList)
     if(anotherList.isSorted() == false)
         anotherList.Sort(); // Sort first
 
-    ListNode<T> *currentNodeL1 = firstPtr, *currentNodeL2 = anotherList.firstPtr;
+    ListNode *currentNodeL1 = firstPtr, *currentNodeL2 = anotherList.firstPtr;
 
     while(currentNodeL1 != nullptr)
     {
@@ -949,10 +951,10 @@ std::ostream& operator<<(std::ostream& stream, List<T>& list)
  * @note    The algorithm used is the linear search as there are no value-based relation between nodes.
  */
 template<class T>
-ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
+typename List<T>::ListNode* List<T>::Find(const T& data, ListNode* beginByNode)
 {
     // Search begins by the given node
-    ListNode<T>* currentNode = beginByNode;
+    ListNode* currentNode = beginByNode;
 
     /* Break the search if the element is found
      * or the last element is hit */
@@ -976,10 +978,10 @@ ListNode<T>* List<T>::Find(const T& data, ListNode<T>* beginByNode)
  * @note    The algorithm used is the linear search as there are no value-based relation between nodes.
  */
 template<class T>
-ListNode<T>* List<T>::FindNotOf(const T& data, ListNode<T>* beginByNode)
+typename List<T>::ListNode* List<T>::FindNotOf(const T& data, ListNode* beginByNode)
 {
     // Search begins by the given node
-    ListNode<T>* currentNode = beginByNode;
+    ListNode* currentNode = beginByNode;
 
     /* Break the search if the element is found
      * or the last element is hit */
@@ -1003,10 +1005,10 @@ ListNode<T>* List<T>::FindNotOf(const T& data, ListNode<T>* beginByNode)
  * @note    The algorithm used is the reversed linear search as there are no value-based relation between nodes.
  */
 template<class T>
-ListNode<T>* List<T>::FindReversed(const T& data, ListNode<T>* beginByNode)
+typename List<T>::ListNode* List<T>::FindReversed(const T& data, ListNode* beginByNode)
 {
     // Search begins by the given node
-    ListNode<T>* currentNode = beginByNode;
+    ListNode* currentNode = beginByNode;
 
     /* Break the search if the element is found
      * or the first element is hit */
@@ -1030,10 +1032,10 @@ ListNode<T>* List<T>::FindReversed(const T& data, ListNode<T>* beginByNode)
  * @note    The algorithm used is the reversed linear search as there are no value-based relation between nodes.
  */
 template<class T>
-ListNode<T>* List<T>::FindNotOfReversed(const T& data, ListNode<T>* beginByNode)
+typename List<T>::ListNode* List<T>::FindNotOfReversed(const T& data, ListNode* beginByNode)
 {
     // Search begins by the given node
-    ListNode<T>* currentNode = beginByNode;
+    ListNode* currentNode = beginByNode;
 
     /* Break the search if the element is found
      * or the first element is hit */
@@ -1055,7 +1057,7 @@ ListNode<T>* List<T>::FindNotOfReversed(const T& data, ListNode<T>* beginByNode)
  * @throws  std::logic_error If the list is empty or the start node is undefined.
  */
 template<class T>
-ListNode<T>* List<T>::FindMinimum(ListNode<T>* beginByNode)
+typename List<T>::ListNode* List<T>::FindMinimum(ListNode* beginByNode)
 {
     // Check for exceptional situations
     if(beginByNode == nullptr)
@@ -1064,7 +1066,7 @@ ListNode<T>* List<T>::FindMinimum(ListNode<T>* beginByNode)
         throw std::logic_error("List is empty!");
     else{}
 
-    ListNode<T>* currentNode = beginByNode->nextPtr, *minNode = beginByNode;
+    ListNode* currentNode = beginByNode->nextPtr, *minNode = beginByNode;
 
     while(currentNode != nullptr)
     {
@@ -1083,7 +1085,7 @@ ListNode<T>* List<T>::FindMinimum(ListNode<T>* beginByNode)
  * @throw   std::logic_error If the list was empty.
  */
 template<class T>
-void List<T>::DetachNode(ListNode<T>* removingNode)
+void List<T>::DetachNode(ListNode* removingNode)
 {
     if(isEmpty() == true)
         throw std::logic_error("Empty list cannot have any nodes!");
@@ -1112,7 +1114,7 @@ void List<T>::DetachNode(ListNode<T>* removingNode)
  * @param   removingNode Address of the node to be removed.
  */
 template<class T>
-void List<T>::RemoveNode(ListNode<T>* removingNode)
+void List<T>::RemoveNode(ListNode* removingNode)
 {
     if(removingNode == nullptr)         // Return if the node is not valids
         return;
@@ -1138,10 +1140,10 @@ void List<T>::RemoveNode(ListNode<T>* removingNode)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveIf(const T& data, ListNode<T>* beginByNode)
+List<T>& List<T>::RemoveIf(const T& data, ListNode* beginByNode)
 {
-    ListNode<T>* removingNode;      // Node to be removed
-    ListNode<T>* searchStartPoint;  // Node where the search will start again from
+    ListNode* removingNode;      // Node to be removed
+    ListNode* searchStartPoint;  // Node where the search will start again from
 
     /* Find and remove all specified nodes until
      * we hit the last of the list */
@@ -1163,7 +1165,7 @@ List<T>& List<T>::RemoveIf(const T& data, ListNode<T>* beginByNode)
  * @throws  std::logic_error If the nodes are undefined.
  */
 template<class T>
-void List<T>::SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+void List<T>::SwapNodes(ListNode* firstNode, ListNode* secondNode)
 {
     // Check for exceptional situations
     if((firstNode == nullptr) || (secondNode == nullptr))
@@ -1188,7 +1190,7 @@ void List<T>::SwapNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
  * @throws  std::logic_error If the nodes are not successively bounded.
  */
 template<class T>
-void List<T>::SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+void List<T>::SwapSuccessiveNodes(ListNode* firstNode, ListNode* secondNode)
 {
     // Check for exceptional situations
     if((firstNode->nextPtr != secondNode) || (secondNode->prevPtr != firstNode))
@@ -1222,7 +1224,7 @@ void List<T>::SwapSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNod
  * @throws  std::logic_error If nodes are the same.
  */
 template<class T>
-void List<T>::SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* secondNode)
+void List<T>::SwapNonSuccessiveNodes(ListNode* firstNode, ListNode* secondNode)
 {
     // Check for exceptional situations
     if((firstNode == nullptr) || (secondNode == nullptr))
@@ -1235,7 +1237,7 @@ void List<T>::SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* second
         return SwapSuccessiveNodes(secondNode, firstNode);
     else{}
 
-    ListNode<T>* tempPtr = nullptr;
+    ListNode* tempPtr = nullptr;
 
     /** Update previos pointers **/
     if(firstNode == firstPtr)	// First one is the firstPtr
@@ -1299,7 +1301,7 @@ void List<T>::SwapNonSuccessiveNodes(ListNode<T>* firstNode, ListNode<T>* second
  * @throws  std::logic_error If any of the given nodes is NULL.
  */
 template<class T>
-void List<T>::Append(ListNode<T>* baseNode, ListNode<T>* newNode)
+void List<T>::Append(ListNode* baseNode, ListNode* newNode)
 {
     if((baseNode == nullptr) || (newNode == nullptr))
         throw std::logic_error("Base node cannot be NULL while appending!");
@@ -1324,7 +1326,7 @@ void List<T>::Append(ListNode<T>* baseNode, ListNode<T>* newNode)
  * @throws  std::logic_error If any of the given nodes is NULL.
  */
 template<class T>
-void List<T>::Prepend(ListNode<T>* baseNode, ListNode<T>* newNode)
+void List<T>::Prepend(ListNode* baseNode, ListNode* newNode)
 {
     if((baseNode == nullptr) || (newNode == nullptr))
         throw std::logic_error("Base node cannot be NULL while appending!");
@@ -1349,7 +1351,7 @@ void List<T>::Prepend(ListNode<T>* baseNode, ListNode<T>* newNode)
  * @throw   std::logic_error If the destination node is NULL.
  */
 template<class T>
-void List<T>::Append(ListNode<T>* baseNode, List<T>& anotherList)
+void List<T>::Append(ListNode* baseNode, List<T>& anotherList)
 {
     if(baseNode == nullptr)
         throw std::logic_error("Base node cannot be NULL while appending!");

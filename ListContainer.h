@@ -22,6 +22,7 @@
  *                                   Initializer list constructor added.
  *                                   Equality and inequality operator overloaded for iterator class.
  *              March 7, 2021     -> const_iterator class added for non-assignable data reference.
+ *              March 8, 2021     -> operator<< removed from member functions, declared globally.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -109,12 +110,6 @@ public:
     { return (firstPtr == anotherList.firstPtr); }
     bool operator!=(const List& anotherList) const    // Compare two lists by inequality
     { return !operator==(anotherList); }
-
-    /* Declaring a function as a friend inside of a template class
-       corrupts the template usage. You may want to check the holy StackOverflow :)
-       stackoverflow.com/questions/4660123 */
-    template<class _T>
-    friend std::ostream& operator<<(std::ostream& stream, List<_T>& list);
 
     /*** Iterators ***/
     class iterator{
@@ -912,35 +907,6 @@ void List<T>::Splice(const iterator& destination, List<T>& anotherList)
 }
 
 /**
- * @brief   Output insertion overloaded to be used with a list
- * @param   stream  Output stream where the list will be inserted to.
- * @param   list    List to be inserted.
- * @return  lValue reference to stream to support cascaded calls.
- */
-template<class T>
-std::ostream& operator<<(std::ostream& stream, List<T>& list)
-{
-    if((list.isEmpty() == true) || (list.firstPtr == nullptr))
-        stream << "-- empty list --";
-    else
-    {
-        typename List<T>::const_iterator it = list.cbegin();
-
-        while(true)
-        {
-            stream << *it << " ";
-
-            if(it != list.cend())
-                it++;
-            else
-                break;
-        }
-    }
-
-    return stream; // Support cascaded streams
-}
-
-/**
  * @brief   Finds the address of the first node where the specified data is contained at.
  * @param   data          Search key
  * @param   beginByNode   Search start by the given node
@@ -1377,6 +1343,35 @@ void List<T>::Append(ListNode* baseNode, List<T>& anotherList)
     anotherList.firstPtr    = nullptr;
     anotherList.lastPtr     = nullptr;
     anotherList.numberOfNodes = 0;
+}
+
+/**
+ * @brief   Output insertion overloaded to be used with a list
+ * @param   stream  Output stream where the list will be inserted to.
+ * @param   list    List to be inserted.
+ * @return  lValue reference to stream to support cascaded calls.
+ */
+template<class T>
+std::ostream& operator<<(std::ostream& stream, const List<T>& list)
+{
+    if(list.isEmpty() == true)
+        stream << "-- empty list --";
+    else
+    {
+        typename List<T>::const_iterator it = list.cbegin();
+
+        while(true)
+        {
+            stream << *it << " ";
+
+            if(it != list.cend())
+                it++;
+            else
+                break;
+        }
+    }
+
+    return stream; // Support cascaded streams
 }
 
 #endif  // Prevent recursive inclusion

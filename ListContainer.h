@@ -13,16 +13,17 @@
  *              February 28, 2021 -> Emplace append and emplace prepend methods added.
  *                                -> Iterator class and related functions added.
  *              March 2, 2021     -> Merge and concatenate methods added.
- *                                   Splice method added.
+ *                                -> Splice method added.
  *              March 5, 2021     -> Recursive inclusion blocker added.
- *                                   Fill constructor added with two versions.
+ *                                -> Fill constructor added with two versions.
  *              March 6, 2021     -> Range constructor added.
- *                                   Copy constructor added.
- *                                   Move constructor added.
- *                                   Initializer list constructor added.
- *                                   Equality and inequality operator overloaded for iterator class.
+ *                                -> Copy constructor added.
+ *                                -> Move constructor added.
+ *                                -> Initializer list constructor added.
+ *                                -> Equality and inequality operator overloaded for iterator class.
  *              March 7, 2021     -> const_iterator class added for non-assignable data reference.
  *              March 8, 2021     -> operator<< removed from member functions, declared globally.
+ *                                -> Iterator behavior changed to support compatibility with <algorithms>
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -116,67 +117,51 @@ public:
         friend class List;
     public:
         iterator() = delete;    // There must be a node address to reach the list
-        iterator(ListNode* node) : node(node)
-        { if(node == nullptr) throw std::logic_error("Iterator construction failed!"); }
+        iterator(const List& list, ListNode* initialNode) : list(list), node(initialNode) { }
 
-        void operator++()       { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Prefix increment
-        void operator++(int)    { if(node->nextPtr != nullptr) node = node->nextPtr; }  // Postfix increment
-        void operator--()       { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Prefix decrement
-        void operator--(int)    { if(node->prevPtr != nullptr) node = node->prevPtr; }  // Postfix decrement
-
-        T& operator*() { return node->data; }   // Dereference operator
         bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
         bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
+        T& operator*()          { return node->data;                        }               // Dereference operator
+        void operator++()       { if(node != nullptr) node = node->nextPtr; }               // Prefix increment
+        void operator++(int)    { if(node != nullptr) node = node->nextPtr; }               // Postfix increment
+
+        void operator--()   // Prefix decrement
+        {
+            if(node == nullptr)
+                node = list.lastPtr;
+            else if (node != list.firstPtr)
+                node = node->prevPtr;
+            else{}
+        }
+
+        void operator--(int) // Postfix decrement
+        {
+            if(node == nullptr)
+                node = list.lastPtr;
+            else if (node != list.firstPtr)
+                node = node->prevPtr;
+            else{}
+        }
 
     protected:
-        ListNode* node = nullptr;
+        const List& list;           // List where the iteration occurs
+        ListNode* node = nullptr;   // Current position of the iterator
     };
 
     class const_iterator : public iterator{
     public:
         const_iterator() = delete;
-        const_iterator(ListNode* node) : iterator (node) { /* Empty constructor */ }
-        const_iterator(iterator& it) : iterator(it) { }
+        const_iterator(const List& list, ListNode* initialNode)     : iterator(list, initialNode)   { /* Empty constructor */ }
+        const_iterator(iterator& it)                                : iterator(it)                  { /* Empty constructor */ }
 
         // Dereference operator returns constant reference to make the data non-assignable
-        const T& operator*() { return this->node->data; }
+        const T& operator*() { return this->node->data; }  // Dereference operator
     };
 
-    const_iterator cbegin() const    // Returns a const iterator pointing to the first element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        return const_iterator(firstPtr);
-    }
-
-    const_iterator cend() const     // Returns a const iterator pointing to the last element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        /* IMPORTANT NOTE:  Unlike the STL's end, this end function returns a const iterator
-                            starting from the last node of the list. So, be careful :) */
-        return const_iterator(lastPtr);
-    }
-
-    iterator begin()    // Returns an iterator pointing to the first element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        return iterator(firstPtr);
-    }
-
-    iterator end()      // Returns an iterator pointing to the last element
-    {
-        if(isEmpty() == true)
-            throw std::logic_error("Cannot iterate in an empty list!");
-
-        /* IMPORTANT NOTE:  Unlike the STL's end, this end function returns an iterator
-                            starting from the last node of the list. So, be careful :) */
-        return iterator(lastPtr);
-    }
+    const_iterator  cbegin()    const   { return const_iterator(*this, firstPtr);  }    // Constant iterator starting from the first node
+    const_iterator  cend()      const   { return const_iterator(*this, nullptr);   }    // Constant iterator starting from past the end
+    iterator        begin()             { return iterator(*this, firstPtr);        }    // Iterator starting from the first node
+    iterator        end()               { return iterator(*this, nullptr);         }    // Iterator starting from past the end
 
 private:
     /*** Searching ***/
@@ -189,13 +174,13 @@ private:
     /*** Operations **/
     void DetachNode(ListNode* removingNode);                                    // Detaching a node from a list by not destroying the content
     void RemoveNode(ListNode* removingNode);                                    // Remove a specific node
-    List& RemoveIf(const T& data, ListNode* beginByNode);                    // Remove all samples of a specific data
+    List& RemoveIf(const T& data, ListNode* beginByNode);                       // Remove all samples of a specific data
     void SwapNodes(ListNode* firstNode, ListNode* secondNode);                  // Swap different nodes
     void SwapSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);        // Swap directly linked nodes
     void SwapNonSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);     // Swap indirectly linked nodes
     void Append(ListNode* baseNode, ListNode* newNode);                         // Appending a node to a certain node
     void Prepend(ListNode* baseNode, ListNode* newNode);                        // Prepending a node to a certain node
-    void Append(ListNode* baseNode, List& anotherList);                      // Appending a list to a certain node7
+    void Append(ListNode* baseNode, List& anotherList);                         // Appending a list to a certain node7
 
     /*** Members ***/
     ListNode* firstPtr   = nullptr;  // First node of the list
@@ -1360,14 +1345,10 @@ std::ostream& operator<<(std::ostream& stream, const List<T>& list)
     {
         typename List<T>::const_iterator it = list.cbegin();
 
-        while(true)
+        while(it != list.cend())
         {
             stream << *it << " ";
-
-            if(it != list.cend())
-                it++;
-            else
-                break;
+            it++;
         }
     }
 

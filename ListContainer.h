@@ -24,6 +24,7 @@
  *              March 7, 2021     -> const_iterator class added for non-assignable data reference.
  *              March 8, 2021     -> operator<< removed from member functions, declared globally.
  *                                -> Iterator behavior changed to support compatibility with <algorithms>
+ *              March 11, 2021    -> Copy assignment operator overloaded for container.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -111,6 +112,9 @@ public:
     { return (firstPtr == anotherList.firstPtr); }
     bool operator!=(const List& anotherList) const    // Compare two lists by inequality
     { return !operator==(anotherList); }
+
+    List& operator=(List sourceList)    // Copy assignment operator(source already copied at parameter list)
+    { Swap(sourceList); return *this; } // Copy constructor must have already been implemented Check: stackoverflow.com/questions/3279543
 
     /*** Iterators ***/
     class iterator{

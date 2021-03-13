@@ -12,6 +12,7 @@
  *                                   Initializer list constructor added.
  *                                   Constructor exception mechanism enhanced.
  *              February 25, 2021 -> File documented with doxygen.
+ *              March 13, 2021    -> Recursive inclusion preventer added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -24,12 +25,12 @@
 /** Libraries **/
 #include <iostream>
 #include <exception>
-#include <string>
 
 template<class T>
 class Array{
 public:
     /*** Constructors and Destructors ***/
+    Array() = delete;                                   // Default constructor is prohibited
     Array(const size_t arraySize);                      // Construct by size
     Array(const Array& copyArr);                        // Copy constructor
     Array(Array&& moveArr);                             // Move constructor
@@ -48,7 +49,7 @@ public:
     const Array& operator=(const Array& rightArr);          // Copy assignment
 
     /*** Status Checkers ***/
-    size_t getSize(void) const { return (container == nullptr) ? 0 : size; }
+    size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
 
 private:
     /*** Members ***/
@@ -87,7 +88,7 @@ Array<T>::Array(const Array<T>& copyArr)
 
     // Element wise copy
     for(size_t index = 0; index < copyArr.getSize(); index++)
-        (*this)[index] = copyArr[index];
+        container[index] = copyArr[index];
 }
 
 /**
@@ -99,9 +100,6 @@ template<class T>
 Array<T>::Array(Array<T>&& moveArr)
 : size(moveArr.getSize()), container(moveArr.container)
 {
-    if(size == 0)    // Create array only if the size is valid(positive)
-        throw std::logic_error("Array size cannot be zero!");
-
     /* No need to make an element wised copy as the source is
        a constant array. Assigning nullptr to moveArr's container
        prevents destroying its content as we used its resources
@@ -124,7 +122,7 @@ Array<T>::Array(const T* const source, const size_t size)
         throw std::logic_error("Array size cannot be zero!");
     else if(source == nullptr)
         throw std::logic_error("Invalid source!");
-    else;
+    else{ }
 
     container = new T[size];    // Allocate space to copy elements
 
@@ -165,7 +163,6 @@ Array<T>::~Array()
  * @brief   Subscript operator for rValue return
  * @param   index   Index of element to be fetched
  * @return  rValue reference to the data at given index
- * @throws  std::logic_error When container is empty or corrupted
  * @throws  std::range_error When given index is out of container range
  */
 template<class T>
@@ -174,22 +171,15 @@ const T& Array<T>::operator[](const size_t index) const
     if(index < size)    // Check for out-of-range random access
         return container[index];
 
-    if(container == nullptr)
-        throw std::logic_error("Container deleted or has not been allocated properly!");
-
     /*  In case of an attempt to access an out-of-range element
         Throw an exception with related information messages.   */
-    std::string errorMessage = "Out-of-Range Exception Occured ";
-                errorMessage += "(Size = "  + std::to_string(size)  + ") ";
-                errorMessage += "(Index = " + std::to_string(index) + ") ";
-    throw std::range_error(errorMessage);
+    throw std::range_error("Out-of-range exception occured!");
 }
 
 /**
  * @brief   Subscript operator for lValue return
  * @param   index   Index of element to be fetched
  * @return  lValue reference to the data at given index
- * @throws  std::logic_error When container is empty or corrupted
  * @throws  std::range_error When given index is out of container range
  */
 template<class T>
@@ -198,15 +188,9 @@ T& Array<T>::operator[](const size_t index)
     if(index < size)    // Check for out-of-range random access
         return container[index];
 
-    if(container == nullptr)
-        throw std::logic_error("Container deleted or has not been allocated properly!");
-
     /*  In case of an attempt to access an out-of-range element
         Throw an exception with related information messages.   */
-    std::string errorMessage = "Out-of-Range Exception Occured ";
-                errorMessage += "(Size = "  + std::to_string(size)  + ") ";
-                errorMessage += "(Index = " + std::to_string(index) + ") ";
-    throw std::range_error(errorMessage);
+    throw std::range_error("Out-of-range exception occured!");
 }
 
 /**
@@ -228,8 +212,8 @@ bool Array<T>::operator==(const Array<T>& rightArr) const
         return true;
 
     for(size_t index = 0; index < size; index++)    // Iterate on both arrays
-        if((*this)[index] != rightArr[index])     // operator== must have been overloaded for non-built-in types
-            return false;   // Return false in case of any little difference
+        if((*this)[index] != rightArr[index])       // operator== must have been overloaded for non-built-in types
+            return false;   // Return false in case of an inequal element
 
     return true;    // Arrays are the same
 }
@@ -250,21 +234,23 @@ bool Array<T>::operator!=(const Array<T>& right) const
 /**
  * @brief   Assigment operator
  * @param   rightArr      Source array
- * @return  rValue reference to resulting array.
+ * @return  rValue reference to resulting array to support cascaded assignments(e.g. arr = arr1 = arr2)
  *
  * @note    The content of left array will be deleted. So, be careful.
  */
 template<class T>
 const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
-{   // Return a const reference to support cascade assignments(e.g. arr = arr1 = arr2)
-    delete [] container;    // Destroy left array
+{
+    if(rightArr.container == container) // Check self assignment
+        return *this;
 
+    delete [] container;                                // Destroy left array
     container = new T[rightArr.getSize()];              // Allocate space for incoming elements
     const_cast<size_t&>(size) = rightArr.getSize();     // Determine new array size
 
     // Element wise copy
     for(size_t index = 0; index < rightArr.getSize(); index++)
-        (*this)[index] = rightArr[index];
+        container[index] = rightArr[index];
 
     return *this;
 }
@@ -282,9 +268,6 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
 template<class T>
 std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
 {
-    if(array.container == nullptr)
-        stream << "Array is empty!";
-
     for(size_t index = 0; index < array.getSize(); index++)
         stream << array[index] << " ";
 
@@ -303,9 +286,6 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
 template<class T>
 std::istream& operator>>(std::istream& stream, Array<T>& array)
 {
-    if(array.container == nullptr)
-        throw "Non-initialized array cannot get inputs!";
-
     for(size_t index = 0; index < array.getSize(); index++)
         stream >> array[index];
 

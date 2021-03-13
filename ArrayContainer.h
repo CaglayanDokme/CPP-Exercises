@@ -14,10 +14,10 @@
  *              February 25, 2021 -> File documented with doxygen.
  *              March 13, 2021    -> Recursive inclusion preventer added.
  *                                -> Element access functions added.
- *
+ *                                -> Modifier functions added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
- *  @copyright  No copyright. Code is open source.
+ *  @copyright  No copyright.
  */
 
 /** Recursive inclusion preventer **/
@@ -57,6 +57,9 @@ public:
     const T& First() const { return operator[](0); }            // Invoke subscript operator for the first element
     T& Last()              { return operator[](size - 1); }     // Invoke subscript operator for the last element
     const T& Last() const  { return operator[](size - 1); }     // Invoke subscript operator for the last element
+
+    /*** Modifiers ***/
+    Array& Fill(const T& fillValue);
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
@@ -261,6 +264,20 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
     // Element wise copy
     for(size_t index = 0; index < rightArr.getSize(); index++)
         container[index] = rightArr[index];
+
+    return *this;
+}
+
+/**
+ * @brief   Fills the array with the given value
+ * @param   fillValue Value to be used to fill the array
+ * @return  lValue reference to support cascaded calls
+ */
+template<class T>
+Array<T>& Array<T>::Fill(const T& fillValue)
+{
+    for (size_t index = 0; index < size; index++)
+        container[index] = fillValue;
 
     return *this;
 }

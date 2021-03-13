@@ -30,19 +30,19 @@
  *  @copyright  No copyright. Code is open source.
  */
 
-/** Recursive inclusion preventer **/
+/*** Recursive inclusion preventer ***/
 #ifndef LIST_CONTAINER_H
 #define LIST_CONTAINER_H
 
-/** Libraries **/
+/*** Libraries ***/
 #include <ostream>
 
 template<class T>
 class List{
-    /** Forward declarations **/
+    /*** Forward declarations ***/
     class ListNode;
 public:
-    /** Forward declarations **/
+    /*** Forward declarations ***/
     class iterator;
     class const_iterator;
 
@@ -547,7 +547,7 @@ List<T>& List<T>::RemoveFirst()
 {
     if(isEmpty() == false)
     {
-        ListNode* tempPtr = firstPtr;    // Save removing node addresss
+        ListNode* tempPtr = firstPtr;       // Save removing node addresss
         firstPtr = firstPtr->nextPtr;       // Update firstPtr
         delete tempPtr;                     // Delete saved firstPtr
         numberOfNodes--;                    // Decrement node count
@@ -568,7 +568,7 @@ List<T>& List<T>::RemoveLast()
 {
     if(isEmpty() == false)
     {
-        ListNode* tempPtr = lastPtr;     // Save removing node addresss
+        ListNode* tempPtr = lastPtr;        // Save removing node addresss
         lastPtr = lastPtr->prevPtr;         // Update lastPtr
         delete tempPtr;                     // Delete saved lastPtr
         numberOfNodes--;                    // Decrement node count

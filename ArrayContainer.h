@@ -7,7 +7,7 @@
  * @date        February 23, 2021 -> First release
  *              February 24, 2021 -> Array comparison and assignment added.
  *                                   Copy and move constructor added.
- *                                   Construction with traditional array added.
+ *                                   Construction with C-Style array added.
  *                                   Stream insertion operators overloaded.
  *                                   Initializer list constructor added.
  *                                   Constructor exception mechanism enhanced.
@@ -17,6 +17,11 @@
  *  @copyright  No copyright. Code is open source.
  */
 
+/** Recursive inclusion preventer **/
+#ifndef ARRAY_CONTAINER_H
+#define ARRAY_CONTAINER_H
+
+/** Libraries **/
 #include <iostream>
 #include <exception>
 #include <string>
@@ -24,39 +29,32 @@
 template<class T>
 class Array{
 public:
-    Array(const size_t arraySize);          // Construct by size
-    Array(const Array<T>& copyArr);         // Copy constructor
-    Array(Array<T>&& moveArr);              // Move constructor
-    Array(const T* const source, const size_t size);    // Construct via traditional array
-    Array(std::initializer_list<T> initializerList);
+    /*** Constructors and Destructors ***/
+    Array(const size_t arraySize);                      // Construct by size
+    Array(const Array& copyArr);                        // Copy constructor
+    Array(Array&& moveArr);                             // Move constructor
+    Array(const T* const source, const size_t size);    // Construct via C-Style array
+    Array(std::initializer_list<T> initializerList);    // Construct with initializer list
 
     virtual ~Array(); // Destructor defined virtual to support efficient polymorphism
 
-    const T& operator[](const size_t index) const;      // Subscript operator for const objects returns rValue
-    T&  operator[](const size_t index);                 // Subscript operator for non-const objects returns lValue
+    /*** Operator Overloadings ***/
+    const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
+    T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
 
-    bool operator==(const Array<T>& rightArr) const;    // Array comparison
-    bool operator!=(const Array<T>& rightArr) const;    // Array comparison by inequality
+    bool operator==(const Array& rightArr) const;           // Array comparison
+    bool operator!=(const Array& rightArr) const;           // Array comparison by inequality
 
-    const Array<T>& operator=(const Array<T>& rightArr);    // Array assignment
+    const Array& operator=(const Array& rightArr);          // Copy assignment
 
-    /* Declaring a function as a friend inside of a template class
-       corrupts the template usage. You may want to check the holy StackOverflow :)
-       stackoverflow.com/questions/4660123 */
-    template<class _T>
-    friend std::ostream& operator<<(std::ostream& stream, const Array<_T>& array);
-
-    template<class _T>
-    friend std::istream& operator>>(std::istream& stream, Array<_T>& array);
-
-    size_t getSize(void) const
-    { return (container == nullptr) ? 0 : size; }
+    /*** Status Checkers ***/
+    size_t getSize(void) const { return (container == nullptr) ? 0 : size; }
 
 private:
+    /*** Members ***/
     const size_t size   = 0;        // Size will be initialized at constructor
     T* container        = nullptr;  // Pointer will be used for addressing the allocated area
 };
-
 
 /**
  * @brief   Constructs the internal array of given size
@@ -277,13 +275,13 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
  * @param   stream  Destination output stream for insertion
  * @param   array   Array to be inserted
  * @return  ostream reference to support cascaded insertions.
+ *
+ * @note    Stream operators must be declared global as the left objects
+ *          of them will always be members of type ostream or istream.
  */
 template<class T>
 std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
 {
-    /* Stream operators must be declared global as the
-       left objects of them will always be members of
-       type ostream or istream.*/
     if(array.container == nullptr)
         stream << "Array is empty!";
 
@@ -298,13 +296,13 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
  * @param   stream  Source input stream for insertion
  * @param   array   Array to be inserted
  * @return  istream reference to support cascaded insertions.
+ *
+ * @note    Stream operators must be declared global as the left objects
+ *          of them will always be members of type ostream or istream.
  */
 template<class T>
 std::istream& operator>>(std::istream& stream, Array<T>& array)
 {
-    /* Stream operators must be declared global as the
-       left objects of them will always be members of
-       type ostream or istream.*/
     if(array.container == nullptr)
         throw "Non-initialized array cannot get inputs!";
 
@@ -313,3 +311,5 @@ std::istream& operator>>(std::istream& stream, Array<T>& array)
 
     return stream;  // Return reference to support cascade streaming
 }
+
+#endif  // Recursive inclusion preventer endif

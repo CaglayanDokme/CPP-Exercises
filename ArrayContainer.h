@@ -15,6 +15,7 @@
  *              March 13, 2021    -> Recursive inclusion preventer added.
  *                                -> Element access functions added.
  *                                -> Modifier functions added.
+ *                                -> Container iterators added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -64,6 +65,37 @@ public:
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
+
+    /*** Iterators ***/
+    class iterator{
+    public:
+        iterator() = delete;
+        iterator(Array& array, const size_t position) : array(array), currentPos(position)
+        {
+            if(array.getSize() < position)
+                throw std::logic_error("Iterator cannot reside outside of the array.");
+        }
+
+        // Positional operators
+        void operator++()       { if(currentPos < array.getSize())  currentPos++; }  // Prefix increment
+        void operator++(int)    { if(currentPos < array.getSize())  currentPos++; }  // Postfix increment
+        void operator--()       { if(currentPos > 0)                currentPos--; }  // Prefix decrement
+        void operator--(int)    { if(currentPos > 0)                currentPos--; }  // Postfix decrement
+
+        // Comparison operators
+        bool operator==(const iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }
+        bool operator!=(const iterator& anotherIt) const { return !operator==(anotherIt); }
+
+        // Element access
+        T& operator*() { return array[currentPos]; }
+
+    private:
+        Array& array        = nullptr;
+        size_t currentPos   = 0;
+    };
+
+    iterator begin() { return iterator(*this, 0);       }
+    iterator end()   { return iterator(*this, size);    }
 
 private:
     /*** Members ***/

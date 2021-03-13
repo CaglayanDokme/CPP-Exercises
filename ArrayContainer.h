@@ -53,8 +53,10 @@ public:
     /*** Element Access ***/
     T& at(const size_t position)                { return operator[](position); }    // Invoke subscript operator
     const T& at(const size_t position) const    { return operator[](position); }    // Invoke subscript operator
-    T& front()             { return operator[](0); }    // Invoke subscript operator for first element
-    const T& front() const { return operator[](0); }    // Invoke subscript operator for first element
+    T& First()             { return operator[](0); }            // Invoke subscript operator for the first element
+    const T& First() const { return operator[](0); }            // Invoke subscript operator for the first element
+    T& Last()              { return operator[](size - 1); }     // Invoke subscript operator for the last element
+    const T& Last() const  { return operator[](size - 1); }     // Invoke subscript operator for the last element
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }

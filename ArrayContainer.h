@@ -60,6 +60,7 @@ public:
 
     /*** Modifiers ***/
     Array& Fill(const T& fillValue);
+    Array& Swap(Array& anotherArray);
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
@@ -278,6 +279,29 @@ Array<T>& Array<T>::Fill(const T& fillValue)
 {
     for (size_t index = 0; index < size; index++)
         container[index] = fillValue;
+
+    return *this;
+}
+
+/**
+ * @brief   Swaps the content of two different array
+ * @param   anotherArray Array to be swapped with this
+ * @return  lValue reference to support cascaded calls
+ */
+template<class T>
+Array<T>& Array<T>::Swap(Array<T>& anotherArray)
+{
+    if(anotherArray.container == container)
+        return *this;
+
+    T* tempPtr      = container;    // Save left container
+    size_t tempSize = size;         // Save left size
+
+    container                   = anotherArray.container;   // Assign to left container
+    const_cast<size_t&>(size)   = anotherArray.size;        // Assign to left size
+
+    anotherArray.container                  = tempPtr;      // Assign to right container
+    const_cast<size_t&>(anotherArray.size)  = tempSize;     // Assign to right size
 
     return *this;
 }

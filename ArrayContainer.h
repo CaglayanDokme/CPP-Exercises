@@ -6,13 +6,15 @@
  * @author      Caglayan DOKME, caglayandokme@gmail.com
  * @date        February 23, 2021 -> First release
  *              February 24, 2021 -> Array comparison and assignment added.
- *                                   Copy and move constructor added.
- *                                   Construction with C-Style array added.
- *                                   Stream insertion operators overloaded.
- *                                   Initializer list constructor added.
- *                                   Constructor exception mechanism enhanced.
+ *                                -> Copy and move constructor added.
+ *                                -> Construction with C-Style array added.
+ *                                -> Stream insertion operators overloaded.
+ *                                -> Initializer list constructor added.
+ *                                -> Constructor exception mechanism enhanced.
  *              February 25, 2021 -> File documented with doxygen.
  *              March 13, 2021    -> Recursive inclusion preventer added.
+ *                                -> at(..) element access function added.
+ *
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright. Code is open source.
@@ -47,6 +49,10 @@ public:
     bool operator!=(const Array& rightArr) const;           // Array comparison by inequality
 
     const Array& operator=(const Array& rightArr);          // Copy assignment
+
+    /*** Element Access ***/
+    T& at(const size_t position)                { return operator[](position); }    // Invoke subscript operator
+    const T& at(const size_t position) const    { return operator[](position); }    // Invoke subscript operator
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
@@ -254,7 +260,6 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
 
     return *this;
 }
-
 
 /**
  * @brief   Overloaded output instertion operator

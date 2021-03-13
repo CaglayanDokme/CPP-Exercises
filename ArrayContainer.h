@@ -13,7 +13,7 @@
  *                                -> Constructor exception mechanism enhanced.
  *              February 25, 2021 -> File documented with doxygen.
  *              March 13, 2021    -> Recursive inclusion preventer added.
- *                                -> at(..) element access function added.
+ *                                -> Element access functions added.
  *
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
@@ -53,6 +53,8 @@ public:
     /*** Element Access ***/
     T& at(const size_t position)                { return operator[](position); }    // Invoke subscript operator
     const T& at(const size_t position) const    { return operator[](position); }    // Invoke subscript operator
+    T& front()             { return operator[](0); }    // Invoke subscript operator for first element
+    const T& front() const { return operator[](0); }    // Invoke subscript operator for first element
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }

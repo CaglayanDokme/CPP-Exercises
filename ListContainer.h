@@ -25,9 +25,10 @@
  *              March 8, 2021     -> operator<< removed from member functions, declared globally.
  *                                -> Iterator behavior changed to support compatibility with <algorithms>
  *              March 11, 2021    -> Copy assignment operator overloaded for container.
+ *              March 14, 2021    -> Iterator classes enhanced.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
- *  @copyright  No copyright. Code is open source.
+ *  @copyright  No copyright.
  */
 
 /*** Recursive inclusion preventer ***/
@@ -119,10 +120,11 @@ public:
     /*** Iterators ***/
     class iterator{
         friend class List;
-    public:
+    protected:  // Prevent creation of iterator objects solely by the user
         iterator() = delete;    // There must be a node address to reach the list
         iterator(const List& list, ListNode* initialNode) : list(list), node(initialNode) { }
 
+    public:
         bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
         bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
         T& operator*()          { return node->data;                        }               // Dereference operator
@@ -153,11 +155,12 @@ public:
     };
 
     class const_iterator : public iterator{
-    public:
+    protected:  // Prevent creation of iterator objects solely by the user
         const_iterator() = delete;
         const_iterator(const List& list, ListNode* initialNode)     : iterator(list, initialNode)   { /* Empty constructor */ }
         const_iterator(iterator& it)                                : iterator(it)                  { /* Empty constructor */ }
 
+    public:
         // Dereference operator returns constant reference to make the data non-assignable
         const T& operator*() { return this->node->data; }  // Dereference operator
     };

@@ -36,7 +36,7 @@ public:
     Array() = delete;                                   // Default constructor is prohibited
     Array(const size_t arraySize);                      // Construct by size
     Array(const Array& copyArr);                        // Copy constructor
-    Array(Array&& moveArr);                             // Move constructor
+    Array(const Array&& moveArr) noexcept;              // Move constructor
     Array(const T* const source, const size_t size);    // Construct via C-Style array
     Array(std::initializer_list<T> initializerList);    // Construct with initializer list
 
@@ -46,25 +46,22 @@ public:
     const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
     T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
 
-    bool operator==(const Array& rightArr) const;           // Array comparison
-    bool operator!=(const Array& rightArr) const;           // Array comparison by inequality
+    bool operator==(const Array& rightArr) const noexcept;           // Array comparison
+    bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
-    const Array& operator=(const Array& rightArr);          // Copy assignment
+    const Array& operator=(const Array& rightArr) noexcept;          // Copy assignment
 
     /*** Element Access ***/
-    T& at(const size_t position)                { return operator[](position); }    // Invoke subscript operator
-    const T& at(const size_t position) const    { return operator[](position); }    // Invoke subscript operator
-    T& First()             { return operator[](0); }            // Invoke subscript operator for the first element
-    const T& First() const { return operator[](0); }            // Invoke subscript operator for the first element
-    T& Last()              { return operator[](size - 1); }     // Invoke subscript operator for the last element
-    const T& Last() const  { return operator[](size - 1); }     // Invoke subscript operator for the last element
+    T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
+    const T& at(const size_t position) const noexcept   { return (*this)[position]; }    // Invoke subscript operator
+    T& First() noexcept             { return (*this)[0]; }            // Invoke subscript operator for the first element
+    const T& First() const noexcept { return (*this)[0]; }            // Invoke subscript operator for the first element
+    T& Last() noexcept              { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
+    const T& Last() const noexcept  { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
 
     /*** Modifiers ***/
-    Array& Fill(const T& fillValue);
-    Array& Swap(Array& anotherArray);
-
-    /*** Operations ***/
-    Array& Sort();
+    Array& Fill(const T& fillValue) noexcept;
+    Array& Swap(Array& anotherArray) noexcept;
 
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
@@ -181,14 +178,14 @@ Array<T>::Array(const Array<T>& copyArr)
  * @throws  std::logic_error When size is zero
  */
 template<class T>
-Array<T>::Array(Array<T>&& moveArr)
+Array<T>::Array(const Array<T>&& moveArr) noexcept
 : size(moveArr.getSize()), container(moveArr.container)
 {
     /* No need to make an element wised copy as the source is
        a constant array. Assigning nullptr to moveArr's container
        prevents destroying its content as we used its resources
        to construct the new one.*/
-    moveArr.container = nullptr;
+    const_cast<Array<T>&>(moveArr).container = nullptr;
 }
 
 /**
@@ -284,7 +281,7 @@ T& Array<T>::operator[](const size_t index)
  *          false    If any difference is detected.
  */
 template<class T>
-bool Array<T>::operator==(const Array<T>& rightArr) const
+bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
 {
     if(rightArr.size != size)           // Size should be the same to make a proper comparison
         return false;
@@ -309,7 +306,7 @@ bool Array<T>::operator==(const Array<T>& rightArr) const
  *          false       If arrays are equal
  */
 template<class T>
-bool Array<T>::operator!=(const Array<T>& right) const
+bool Array<T>::operator!=(const Array<T>& right) const noexcept
 {   // Inequality operator returns the opposite of equality operator
     return !(*this == right);   // Invokes Array::operator==
 }
@@ -323,7 +320,7 @@ bool Array<T>::operator!=(const Array<T>& right) const
  * @note    The content of left array will be deleted. So, be careful.
  */
 template<class T>
-const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
+const Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
 {
     if(rightArr.container == container) // Check self assignment
         return *this;
@@ -345,7 +342,7 @@ const Array<T>& Array<T>::operator=(const Array<T>& rightArr)
  * @return  lValue reference to support cascaded calls
  */
 template<class T>
-Array<T>& Array<T>::Fill(const T& fillValue)
+Array<T>& Array<T>::Fill(const T& fillValue) noexcept
 {
     for (size_t index = 0; index < size; index++)
         container[index] = fillValue;
@@ -359,7 +356,7 @@ Array<T>& Array<T>::Fill(const T& fillValue)
  * @return  lValue reference to support cascaded calls
  */
 template<class T>
-Array<T>& Array<T>::Swap(Array<T>& anotherArray)
+Array<T>& Array<T>::Swap(Array<T>& anotherArray) noexcept
 {
     if(anotherArray.container == container)
         return *this;

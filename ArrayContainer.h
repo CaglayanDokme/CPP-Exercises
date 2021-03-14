@@ -28,7 +28,6 @@
 
 /** Libraries **/
 #include <iostream>
-#include <exception>
 
 template<class T>
 class Array{
@@ -217,7 +216,8 @@ Array<T>::Array(std::initializer_list<T> initializerList)
 template<class T>
 Array<T>::~Array()
 {
-    delete [] container;    // Deleting a nullptr is safe, don't worry
+    const_cast<int&>(size) = 0; // Reset size
+    delete [] container;        // Deleting a nullptr is safe, don't worry
 }
 
 

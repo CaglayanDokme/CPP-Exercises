@@ -63,6 +63,9 @@ public:
     Array& Fill(const T& fillValue);
     Array& Swap(Array& anotherArray);
 
+    /*** Operations ***/
+    Array& Sort();
+
     /*** Status Checkers ***/
     size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
 
@@ -89,7 +92,7 @@ public:
         bool operator==(const iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }
         bool operator!=(const iterator& anotherIt) const { return !operator==(anotherIt); }
 
-        // Element access
+        // Element access by lValue reference
         T& operator*() { return array[currentPos]; }
 
     protected:
@@ -97,20 +100,40 @@ public:
         size_t currentPos   = 0;
     };
 
-    class const_iterator : public iterator{
+    class const_iterator{
+        friend class Array;
+
     protected:  // Prevent creation of iterator objects solely by the user
         const_iterator() = delete;
-        const_iterator(Array& array, const size_t position) : iterator(array, position) {}
+        const_iterator(const Array& array, const size_t position) : array(array), currentPos(position)
+        {
+            if(array.getSize() < position)
+                throw std::logic_error("Iterator cannot reside outside of the array.");
+        }
 
     public:
+        // Positional operators
+        const_iterator& operator++()       { if(currentPos < array.getSize())  currentPos++; return *this; }  // Prefix increment
+        const_iterator& operator++(int)    { if(currentPos < array.getSize())  currentPos++; return *this; }  // Postfix increment
+        const_iterator& operator--()       { if(currentPos > 0)                currentPos--; return *this; }  // Prefix decrement
+        const_iterator& operator--(int)    { if(currentPos > 0)                currentPos--; return *this; }  // Postfix decrement
+
+        // Comparison operators
+        bool operator==(const const_iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }
+        bool operator!=(const const_iterator& anotherIt) const { return !operator==(anotherIt); }
+
         // Element access by rValue reference
         const T& operator*() const { return  this->array[this->currentPos]; }
+
+    protected:
+        const Array& array  = nullptr;
+        size_t currentPos   = 0;
     };
 
-    iterator begin()        { return iterator(*this, 0);            }
-    iterator end()          { return iterator(*this, size);         }
-    const_iterator cbegin() { return const_iterator(*this, 0);      }
-    const_iterator cend()   { return const_iterator(*this, size);   }
+    iterator begin()                { return iterator(*this, 0);            }
+    iterator end()                  { return iterator(*this, size);         }
+    const_iterator cbegin() const   { return const_iterator(*this, 0);      }
+    const_iterator cend()   const   { return const_iterator(*this, size);   }
 
 private:
     /*** Members ***/
@@ -216,7 +239,6 @@ Array<T>::Array(std::initializer_list<T> initializerList)
 template<class T>
 Array<T>::~Array()
 {
-    const_cast<int&>(size) = 0; // Reset size
     delete [] container;        // Deleting a nullptr is safe, don't worry
 }
 

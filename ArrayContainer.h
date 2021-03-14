@@ -83,10 +83,10 @@ public:
 
     public:
         // Positional operators
-        void operator++()       { if(currentPos < array.getSize())  currentPos++; }  // Prefix increment
-        void operator++(int)    { if(currentPos < array.getSize())  currentPos++; }  // Postfix increment
-        void operator--()       { if(currentPos > 0)                currentPos--; }  // Prefix decrement
-        void operator--(int)    { if(currentPos > 0)                currentPos--; }  // Postfix decrement
+        iterator& operator++()       { if(currentPos < array.getSize())  currentPos++; return *this; }  // Prefix increment
+        iterator& operator++(int)    { if(currentPos < array.getSize())  currentPos++; return *this; }  // Postfix increment
+        iterator& operator--()       { if(currentPos > 0)                currentPos--; return *this; }  // Prefix decrement
+        iterator& operator--(int)    { if(currentPos > 0)                currentPos--; return *this; }  // Postfix decrement
 
         // Comparison operators
         bool operator==(const iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }

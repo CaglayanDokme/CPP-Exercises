@@ -49,7 +49,7 @@ public:
     bool operator==(const Array& rightArr) const noexcept;           // Array comparison
     bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
-    const Array& operator=(const Array& rightArr) noexcept;          // Copy assignment
+    Array& operator=(const Array& rightArr) noexcept;          // Copy assignment
 
     /*** Element Access ***/
     T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
@@ -311,7 +311,6 @@ bool Array<T>::operator!=(const Array<T>& right) const noexcept
     return !(*this == right);   // Invokes Array::operator==
 }
 
-
 /**
  * @brief   Assigment operator
  * @param   rightArr      Source array
@@ -320,7 +319,7 @@ bool Array<T>::operator!=(const Array<T>& right) const noexcept
  * @note    The content of left array will be deleted. So, be careful.
  */
 template<class T>
-const Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
+Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
 {
     if(rightArr.container == container) // Check self assignment
         return *this;

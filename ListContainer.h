@@ -120,6 +120,7 @@ public:
     /*** Iterators ***/
     class iterator{
         friend class List;
+
     protected:  // Prevent creation of iterator objects solely by the user
         iterator() = delete;    // There must be a node address to reach the list
         iterator(const List& list, ListNode* initialNode) : list(list), node(initialNode) { }
@@ -155,6 +156,8 @@ public:
     };
 
     class const_iterator : public iterator{
+        friend class List;
+
     protected:  // Prevent creation of iterator objects solely by the user
         const_iterator() = delete;
         const_iterator(const List& list, ListNode* initialNode)     : iterator(list, initialNode)   { /* Empty constructor */ }

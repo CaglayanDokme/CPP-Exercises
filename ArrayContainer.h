@@ -16,7 +16,7 @@
  *                                -> Element access functions added.
  *                                -> Modifier functions added.
  *                                -> Container iterators added.
- *              March 14, 2021    -> const_iterator class added.
+ *              March 14, 2021    -> Iterator classes enhanced.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -69,7 +69,9 @@ public:
 
     /*** Iterators ***/
     class iterator{
-    public:
+        friend class Array;
+
+    protected:  // Prevent creation of iterator objects solely by the user
         iterator() = delete;
         iterator(Array& array, const size_t position) : array(array), currentPos(position)
         {
@@ -77,6 +79,7 @@ public:
                 throw std::logic_error("Iterator cannot reside outside of the array.");
         }
 
+    public:
         // Positional operators
         void operator++()       { if(currentPos < array.getSize())  currentPos++; }  // Prefix increment
         void operator++(int)    { if(currentPos < array.getSize())  currentPos++; }  // Postfix increment
@@ -96,18 +99,19 @@ public:
     };
 
     class const_iterator : public iterator{
-    public:
+    protected:  // Prevent creation of iterator objects solely by the user
         const_iterator() = delete;
         const_iterator(Array& array, const size_t position) : iterator(array, position) {}
 
+    public:
         // Element access by rValue reference
         const T& operator*() const { return  this->array[this->currentPos]; }
     };
 
-    iterator begin() { return iterator(*this, 0);       }
-    iterator end()   { return iterator(*this, size);    }
-    const_iterator cbegin() { return const_iterator(*this, 0);       }
-    const_iterator cend()   { return const_iterator(*this, size);    }
+    iterator begin()        { return iterator(*this, 0);            }
+    iterator end()          { return iterator(*this, size);         }
+    const_iterator cbegin() { return const_iterator(*this, 0);      }
+    const_iterator cend()   { return const_iterator(*this, size);   }
 
 private:
     /*** Members ***/

@@ -16,6 +16,7 @@
  *                                -> Element access functions added.
  *                                -> Modifier functions added.
  *                                -> Container iterators added.
+ *              March 14, 2021    -> const_iterator class added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -89,13 +90,24 @@ public:
         // Element access
         T& operator*() { return array[currentPos]; }
 
-    private:
+    protected:
         Array& array        = nullptr;
         size_t currentPos   = 0;
     };
 
+    class const_iterator : public iterator{
+    public:
+        const_iterator() = delete;
+        const_iterator(Array& array, const size_t position) : iterator(array, position) {}
+
+        // Element access by rValue reference
+        const T& operator*() const { return  this->array[this->currentPos]; }
+    };
+
     iterator begin() { return iterator(*this, 0);       }
     iterator end()   { return iterator(*this, size);    }
+    const_iterator cbegin() { return const_iterator(*this, 0);       }
+    const_iterator cend()   { return const_iterator(*this, size);    }
 
 private:
     /*** Members ***/

@@ -64,7 +64,7 @@ public:
     Array& Swap(Array& anotherArray) noexcept;
 
     /*** Status Checkers ***/
-    size_t getSize(void) const  { return (container == nullptr) ? 0 : size; }
+    size_t getSize() const noexcept  { return (data == nullptr) ? 0 : size; }
 
     /*** Iterators ***/
     class iterator{
@@ -135,7 +135,7 @@ public:
 private:
     /*** Members ***/
     const size_t size   = 0;        // Size will be initialized at constructor
-    T* container        = nullptr;  // Pointer will be used for addressing the allocated area
+    T* data        = nullptr;  // Pointer will be used for addressing the allocated area
 };
 
 /**
@@ -145,12 +145,12 @@ private:
  */
 template<class T>
 Array<T>::Array(const size_t arraySize)
-: size(arraySize), container(nullptr)
+: size(arraySize), data(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
         throw std::logic_error("Array size cannot be zero!");
 
-    container = new T[size];
+    data = new T[size];
 }
 
 /**
@@ -160,16 +160,16 @@ Array<T>::Array(const size_t arraySize)
  */
 template<class T>
 Array<T>::Array(const Array<T>& copyArr)
-: size(copyArr.getSize()), container(nullptr)
+: size(copyArr.getSize()), data(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
         throw std::logic_error("Array size cannot be zero!");
 
-    container = new T[size];    // Allocate space to copy elements
+    data = new T[size];    // Allocate space to copy elements
 
     // Element wise copy
     for(size_t index = 0; index < copyArr.getSize(); index++)
-        container[index] = copyArr[index];
+        data[index] = copyArr[index];
 }
 
 /**
@@ -179,13 +179,13 @@ Array<T>::Array(const Array<T>& copyArr)
  */
 template<class T>
 Array<T>::Array(const Array<T>&& moveArr) noexcept
-: size(moveArr.getSize()), container(moveArr.container)
+: size(moveArr.getSize()), data(moveArr.data)
 {
     /* No need to make an element wised copy as the source is
        a constant array. Assigning nullptr to moveArr's container
        prevents destroying its content as we used its resources
        to construct the new one.*/
-    const_cast<Array<T>&>(moveArr).container = nullptr;
+    const_cast<Array<T>&>(moveArr).data = nullptr;
 }
 
 /**
@@ -197,7 +197,7 @@ Array<T>::Array(const Array<T>&& moveArr) noexcept
  */
 template<class T>
 Array<T>::Array(const T* const source, const size_t size)
-: size(size), container(nullptr)
+: size(size), data(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
         throw std::logic_error("Array size cannot be zero!");
@@ -205,7 +205,7 @@ Array<T>::Array(const T* const source, const size_t size)
         throw std::logic_error("Invalid source!");
     else{ }
 
-    container = new T[size];    // Allocate space to copy elements
+    data = new T[size];    // Allocate space to copy elements
 
     for(size_t index = 0; index < size; index++)    // Element wise copy
         (*this)[index] = source[index];
@@ -218,16 +218,16 @@ Array<T>::Array(const T* const source, const size_t size)
  */
 template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
-: size(initializerList.size()), container(nullptr)
+: size(initializerList.size()), data(nullptr)
 {
     if(size == 0)    // Create array only if the size is valid(positive)
         throw std::logic_error("Array size cannot be zero!");
 
-    container = new T[size];    // Allocate space to copy elements
+    data = new T[size];    // Allocate space to copy elements
 
     size_t index = 0;   // Element wise copy
     for(const T& element : initializerList)
-        container[index++] = element;
+        data[index++] = element;
 }
 
 /**
@@ -236,7 +236,7 @@ Array<T>::Array(std::initializer_list<T> initializerList)
 template<class T>
 Array<T>::~Array()
 {
-    delete [] container;        // Deleting a nullptr is safe, don't worry
+    delete [] data;        // Deleting a nullptr is safe, don't worry
 }
 
 
@@ -250,7 +250,7 @@ template<class T>
 const T& Array<T>::operator[](const size_t index) const
 {
     if(index < size)    // Check for out-of-range random access
-        return container[index];
+        return data[index];
 
     /*  In case of an attempt to access an out-of-range element
         Throw an exception with related information messages.   */
@@ -267,7 +267,7 @@ template<class T>
 T& Array<T>::operator[](const size_t index)
 {
     if(index < size)    // Check for out-of-range random access
-        return container[index];
+        return data[index];
 
     /*  In case of an attempt to access an out-of-range element
         Throw an exception with related information messages.   */
@@ -286,10 +286,10 @@ bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
     if(rightArr.size != size)           // Size should be the same to make a proper comparison
         return false;
 
-    if(rightArr.container == nullptr)   // Empty arrays cannot be equal to anything
+    if(rightArr.data == nullptr)   // Empty arrays cannot be equal to anything
         return false;
 
-    if(rightArr.container == container) // Self comparison
+    if(rightArr.data == data) // Self comparison
         return true;
 
     for(size_t index = 0; index < size; index++)    // Iterate on both arrays
@@ -321,16 +321,16 @@ bool Array<T>::operator!=(const Array<T>& right) const noexcept
 template<class T>
 Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
 {
-    if(rightArr.container == container) // Check self assignment
+    if(rightArr.data == data) // Check self assignment
         return *this;
 
-    delete [] container;                                // Destroy left array
-    container = new T[rightArr.getSize()];              // Allocate space for incoming elements
+    delete [] data;                                // Destroy left array
+    data = new T[rightArr.getSize()];              // Allocate space for incoming elements
     const_cast<size_t&>(size) = rightArr.getSize();     // Determine new array size
 
     // Element wise copy
     for(size_t index = 0; index < rightArr.getSize(); index++)
-        container[index] = rightArr[index];
+        data[index] = rightArr[index];
 
     return *this;
 }
@@ -344,7 +344,7 @@ template<class T>
 Array<T>& Array<T>::Fill(const T& fillValue) noexcept
 {
     for (size_t index = 0; index < size; index++)
-        container[index] = fillValue;
+        data[index] = fillValue;
 
     return *this;
 }
@@ -357,16 +357,16 @@ Array<T>& Array<T>::Fill(const T& fillValue) noexcept
 template<class T>
 Array<T>& Array<T>::Swap(Array<T>& anotherArray) noexcept
 {
-    if(anotherArray.container == container)
+    if(anotherArray.data == data)
         return *this;
 
-    T* tempPtr      = container;    // Save left container
+    T* tempPtr      = data;    // Save left container
     size_t tempSize = size;         // Save left size
 
-    container                   = anotherArray.container;   // Assign to left container
+    data                   = anotherArray.data;   // Assign to left container
     const_cast<size_t&>(size)   = anotherArray.size;        // Assign to left size
 
-    anotherArray.container                  = tempPtr;      // Assign to right container
+    anotherArray.data                  = tempPtr;      // Assign to right container
     const_cast<size_t&>(anotherArray.size)  = tempSize;     // Assign to right size
 
     return *this;

@@ -69,70 +69,14 @@ public:
     size_t getSize() const noexcept  { return (data == nullptr) ? 0 : size; }
 
     /*** Iterators ***/
-    class iterator{
-        friend class Array;
+    /* Pointers can be used as iterator as the data structure of the container is completely linear */
+    using iterator = T*;
+    using const_iterator = const T*;
 
-    protected:  // Prevent creation of iterator objects solely by the user
-        iterator() = delete;
-        iterator(Array& array, const size_t position) : array(array), currentPos(position)
-        {
-            if(array.getSize() < position)
-                throw std::logic_error("Iterator cannot reside outside of the array.");
-        }
-
-    public:
-        // Positional operators
-        iterator& operator++()       { if(currentPos < array.getSize())  currentPos++; return *this; }  // Prefix increment
-        iterator& operator++(int)    { if(currentPos < array.getSize())  currentPos++; return *this; }  // Postfix increment
-        iterator& operator--()       { if(currentPos > 0)                currentPos--; return *this; }  // Prefix decrement
-        iterator& operator--(int)    { if(currentPos > 0)                currentPos--; return *this; }  // Postfix decrement
-
-        // Comparison operators
-        bool operator==(const iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }
-        bool operator!=(const iterator& anotherIt) const { return !operator==(anotherIt); }
-
-        // Element access by lValue reference
-        T& operator*() { return array[currentPos]; }
-
-    protected:
-        Array& array;
-        size_t currentPos   = 0;
-    };
-
-    class const_iterator{
-        friend class Array;
-
-    protected:  // Prevent creation of iterator objects solely by the user
-        const_iterator() = delete;
-        const_iterator(const Array& array, const size_t position) : array(array), currentPos(position)
-        {
-            if(array.getSize() < position)
-                throw std::logic_error("Iterator cannot reside outside of the array.");
-        }
-
-    public:
-        // Positional operators
-        const_iterator& operator++()       { if(currentPos < array.getSize())  currentPos++; return *this; }  // Prefix increment
-        const_iterator& operator++(int)    { if(currentPos < array.getSize())  currentPos++; return *this; }  // Postfix increment
-        const_iterator& operator--()       { if(currentPos > 0)                currentPos--; return *this; }  // Prefix decrement
-        const_iterator& operator--(int)    { if(currentPos > 0)                currentPos--; return *this; }  // Postfix decrement
-
-        // Comparison operators
-        bool operator==(const const_iterator& anotherIt) const { return ((anotherIt.currentPos == currentPos) && (anotherIt.array == array)); }
-        bool operator!=(const const_iterator& anotherIt) const { return !operator==(anotherIt); }
-
-        // Element access by rValue reference
-        const T& operator*() const { return  this->array[this->currentPos]; }
-
-    protected:
-        const Array& array;
-        size_t currentPos   = 0;
-    };
-
-    iterator begin()                { return iterator(*this, 0);            }
-    iterator end()                  { return iterator(*this, size);         }
-    const_iterator cbegin() const   { return const_iterator(*this, 0);      }
-    const_iterator cend()   const   { return const_iterator(*this, size);   }
+    iterator begin()                { return data;          }
+    iterator end()                  { return data + size;   }
+    const_iterator cbegin() const   { return data;          }
+    const_iterator cend()   const   { return data + size;   }
 
 private:
     /*** Members ***/

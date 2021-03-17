@@ -49,29 +49,29 @@ public:
     virtual ~Array(); // Destructor defined virtual to support efficient polymorphism
 
     /*** Operator Overloadings ***/
-    const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
-    T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
+    [[nodiscard]] const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
+    [[nodiscard]] T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
 
-    bool operator==(const Array& rightArr) const noexcept;           // Array comparison
-    bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
+    [[nodiscard]] bool operator==(const Array& rightArr) const noexcept;           // Array comparison
+    [[nodiscard]] bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
     Array& operator=(const Array& rightArr) noexcept;   // Copy assignment
     Array& operator=(const Array&& rightArr) noexcept;  // Move assignment
 
     /*** Element Access ***/
-    T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
-    const T& at(const size_t position) const noexcept   { return (*this)[position]; }    // Invoke subscript operator
-    T& First() noexcept             { return (*this)[0]; }            // Invoke subscript operator for the first element
-    const T& First() const noexcept { return (*this)[0]; }            // Invoke subscript operator for the first element
-    T& Last() noexcept              { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
-    const T& Last() const noexcept  { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
+    [[nodiscard]] T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
+    [[nodiscard]] const T& at(const size_t position) const noexcept   { return (*this)[position]; }    // Invoke subscript operator
+    [[nodiscard]] T& First() noexcept             { return (*this)[0]; }            // Invoke subscript operator for the first element
+    [[nodiscard]] const T& First() const noexcept { return (*this)[0]; }            // Invoke subscript operator for the first element
+    [[nodiscard]] T& Last() noexcept              { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
+    [[nodiscard]] const T& Last() const noexcept  { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
 
     /*** Modifiers ***/
     Array& Fill(const T& fillValue) noexcept;
     Array& Swap(Array& anotherArray) noexcept;
 
     /*** Status Checkers ***/
-    size_t getSize() const noexcept  { return size; }
+    [[nodiscard]] size_t getSize() const noexcept  { return size; }
 
     /*** Iterators ***/
     /* Pointers can be used as iterator as the data structure of the container is completely linear */

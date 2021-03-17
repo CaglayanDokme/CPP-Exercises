@@ -96,7 +96,7 @@ public:
         T& operator*() { return array[currentPos]; }
 
     protected:
-        Array& array        = nullptr;
+        Array& array;
         size_t currentPos   = 0;
     };
 
@@ -126,7 +126,7 @@ public:
         const T& operator*() const { return  this->array[this->currentPos]; }
 
     protected:
-        const Array& array  = nullptr;
+        const Array& array;
         size_t currentPos   = 0;
     };
 
@@ -286,10 +286,7 @@ T& Array<T>::operator[](const size_t index)
 template<class T>
 bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
 {
-    if(rightArr.size != size)           // Size should be the same to make a proper comparison
-        return false;
-
-    if(rightArr.data == nullptr)   // Empty arrays cannot be equal to anything
+    if(rightArr.size != size) // Size should be the same to make a proper comparison
         return false;
 
     if(rightArr.data == data) // Self comparison
@@ -297,7 +294,7 @@ bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
 
     for(size_t index = 0; index < size; index++)    // Iterate on both arrays
         if((*this)[index] != rightArr[index])       // operator== must have been overloaded for non-built-in types
-            return false;   // Return false in case of an inequal element
+            return false;                           // Return false in case of an inequal element
 
     return true;    // Arrays are the same
 }

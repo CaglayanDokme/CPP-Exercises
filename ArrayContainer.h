@@ -35,8 +35,7 @@ template<class T>
 class Array{
 public:
     /*** Constructors and Destructors ***/
-    Array() = delete;                                   // Default constructor is prohibited
-    Array(const size_t arraySize);                      // Construct by size
+    Array(const size_t arraySize = 0);                  // Construct by size
     Array(const Array& copyArr);                        // Copy constructor
     Array(const Array&& moveArr) noexcept;              // Move constructor
     Array(const T* const source, const size_t size);    // Construct via C-Style array
@@ -148,12 +147,9 @@ private:
  */
 template<class T>
 Array<T>::Array(const size_t arraySize)
-: size(arraySize), data(nullptr)
+    : size(arraySize), data(new T[size])
 {
-    if(size == 0)    // Create array only if the size is valid(positive)
-        throw std::logic_error("Array size cannot be zero!");
-
-    data = new T[size];
+    /* No operation required */
 }
 
 /**
@@ -163,15 +159,9 @@ Array<T>::Array(const size_t arraySize)
  */
 template<class T>
 Array<T>::Array(const Array<T>& copyArr)
-: size(copyArr.getSize()), data(nullptr)
+: size(copyArr.getSize()), data(new T[size])
 {
-    if(size == 0)    // Create array only if the size is valid(positive)
-        throw std::logic_error("Array size cannot be zero!");
-
-    data = new T[size];    // Allocate space to copy elements
-
-    // Element wise copy
-    for(size_t index = 0; index < copyArr.getSize(); index++)
+    for(size_t index = 0; index < size; ++index)    // Element wise copy
         data[index] = copyArr[index];
 }
 
@@ -184,8 +174,8 @@ template<class T>
 Array<T>::Array(const Array<T>&& moveArr) noexcept
 : size(moveArr.getSize()), data(moveArr.data)
 {
-    /* No need to make an element wised copy as the source is
-       a constant array. Assigning nullptr to moveArr's container
+    /* No need to make an element wise copy as the source is
+       a constant array. Assigning a nullptr to moveArr's container
        prevents destroying its content as we used its resources
        to construct the new one.*/
     const_cast<Array<T>&>(moveArr).data = nullptr;
@@ -200,18 +190,13 @@ Array<T>::Array(const Array<T>&& moveArr) noexcept
  */
 template<class T>
 Array<T>::Array(const T* const source, const size_t size)
-: size(size), data(nullptr)
+: size(size), data(new T[size])
 {
-    if(size == 0)    // Create array only if the size is valid(positive)
-        throw std::logic_error("Array size cannot be zero!");
-    else if(source == nullptr)
+    if(source == nullptr)
         throw std::logic_error("Invalid source!");
-    else{ }
-
-    data = new T[size];    // Allocate space to copy elements
 
     for(size_t index = 0; index < size; index++)    // Element wise copy
-        (*this)[index] = source[index];
+        data[index] = source[index];
 }
 
 /**
@@ -221,13 +206,8 @@ Array<T>::Array(const T* const source, const size_t size)
  */
 template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
-: size(initializerList.size()), data(nullptr)
+: size(initializerList.size()), data(new T[size])
 {
-    if(size == 0)    // Create array only if the size is valid(positive)
-        throw std::logic_error("Array size cannot be zero!");
-
-    data = new T[size];    // Allocate space to copy elements
-
     size_t index = 0;   // Element wise copy
     for(const T& element : initializerList)
         data[index++] = element;
@@ -241,7 +221,6 @@ Array<T>::~Array()
 {
     delete [] data;        // Deleting a nullptr is safe, don't worry
 }
-
 
 /**
  * @brief   Subscript operator for rValue return
@@ -300,7 +279,7 @@ bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
 }
 
 /**
- * @brief   Overloaded comparison operator
+ * @brief   Overloaded incomparison operator
  * @param   rightArr    Array to be compared against
  * @return  true        If arrays are not equal
  *          false       If arrays are equal
@@ -324,9 +303,9 @@ Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
     if(rightArr.data == data) // Check self assignment
         return *this;
 
-    delete [] data;                                // Destroy left array
-    data = new T[rightArr.getSize()];              // Allocate space for incoming elements
-    size = rightArr.getSize();     // Determine new array size
+    delete [] data;                     // Destroy left array
+    data = new T[rightArr.getSize()];   // Allocate space for incoming elements
+    size = rightArr.getSize();          // Determine new array size
 
     // Element wise copy
     for(size_t index = 0; index < rightArr.getSize(); index++)
@@ -348,15 +327,13 @@ Array<T>& Array<T>::operator=(const Array&& rightArr) noexcept
 
     // Release the allocated resource
     delete [] data;
-    size = 0;
 
     // Steal the resource of the right array
     data = rightArr.data;
     size = rightArr.size;
 
-    // Prevent destrutcion of stolen resource
+    // Prevent destrutcion of the stolen resource
     const_cast<Array<T>&>(rightArr).data = nullptr;
-    const_cast<Array<T>&>(rightArr).size = 0;
 
     return *this;
 }

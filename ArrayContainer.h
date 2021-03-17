@@ -17,6 +17,8 @@
  *                                -> Modifier functions added.
  *                                -> Container iterators added.
  *              March 14, 2021    -> Iterator classes enhanced.
+ *              March 17, 2021    -> Move assignment operator added.
+ *                                -> const specifier removed from size member.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -49,7 +51,8 @@ public:
     bool operator==(const Array& rightArr) const noexcept;           // Array comparison
     bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
-    Array& operator=(const Array& rightArr) noexcept;          // Copy assignment
+    Array& operator=(const Array& rightArr) noexcept;   // Copy assignment
+    Array& operator=(const Array&& rightArr) noexcept;  // Move assignment
 
     /*** Element Access ***/
     T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
@@ -134,8 +137,8 @@ public:
 
 private:
     /*** Members ***/
-    const size_t size   = 0;        // Size will be initialized at constructor
-    T* data        = nullptr;  // Pointer will be used for addressing the allocated area
+    size_t size = 0;        // Size will be initialized at constructor
+    T* data     = nullptr;  // Pointer will be used for addressing the allocated area
 };
 
 /**
@@ -312,9 +315,9 @@ bool Array<T>::operator!=(const Array<T>& right) const noexcept
 }
 
 /**
- * @brief   Assigment operator
+ * @brief   Copy assigment operator
  * @param   rightArr      Source array
- * @return  rValue reference to resulting array to support cascaded assignments(e.g. arr = arr1 = arr2)
+ * @return  lValue reference to resulting array to support cascaded assignments(e.g. arr = arr1 = arr2)
  *
  * @note    The content of left array will be deleted. So, be careful.
  */
@@ -326,11 +329,37 @@ Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
 
     delete [] data;                                // Destroy left array
     data = new T[rightArr.getSize()];              // Allocate space for incoming elements
-    const_cast<size_t&>(size) = rightArr.getSize();     // Determine new array size
+    size = rightArr.getSize();     // Determine new array size
 
     // Element wise copy
     for(size_t index = 0; index < rightArr.getSize(); index++)
         data[index] = rightArr[index];
+
+    return *this;
+}
+
+/**
+ * @brief   Move assignment operator
+ * @param   rightArr    Source array
+ * @return  lValue reference to resulting array to support cascaded assignments(e.g. arr = arr1 = arr2)
+ */
+template<class T>
+Array<T>& Array<T>::operator=(const Array&& rightArr) noexcept
+{
+    if(this == &rightArr)
+        return *this;
+
+    // Release the allocated resource
+    delete [] data;
+    size = 0;
+
+    // Steal the resource of the right array
+    data = rightArr.data;
+    size = rightArr.size;
+
+    // Prevent destrutcion of stolen resource
+    const_cast<Array<T>&>(rightArr).data = nullptr;
+    const_cast<Array<T>&>(rightArr).size = 0;
 
     return *this;
 }
@@ -360,14 +389,14 @@ Array<T>& Array<T>::Swap(Array<T>& anotherArray) noexcept
     if(anotherArray.data == data)
         return *this;
 
-    T* tempPtr      = data;    // Save left container
+    T* tempPtr      = data;         // Save left container
     size_t tempSize = size;         // Save left size
 
-    data                   = anotherArray.data;   // Assign to left container
-    const_cast<size_t&>(size)   = anotherArray.size;        // Assign to left size
+    data = anotherArray.data;       // Assign to left container
+    size = anotherArray.size;       // Assign to left size
 
-    anotherArray.data                  = tempPtr;      // Assign to right container
-    const_cast<size_t&>(anotherArray.size)  = tempSize;     // Assign to right size
+    anotherArray.data = tempPtr;    // Assign to right container
+    anotherArray.size = tempSize;   // Assign to right size
 
     return *this;
 }

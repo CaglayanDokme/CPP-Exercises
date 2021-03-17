@@ -19,6 +19,10 @@
  *              March 14, 2021    -> Iterator classes enhanced.
  *              March 17, 2021    -> Move assignment operator added.
  *                                -> const specifier removed from size member.
+ *                                -> Header files explicitly included.
+ *                                -> Iterators simplified.
+ *                                -> Non-zero initial size requirement removed.
+ *                                -> [[nodiscard]] attribute added to related functions.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -142,7 +146,7 @@ Array<T>::Array(const T* const source, const size_t size)
     if(source == nullptr)
         throw std::logic_error("Invalid source!");
 
-    for(size_t index = 0; index < size; index++)    // Element wise copy
+    for(size_t index = 0; index < size; ++index)    // Element wise copy
         data[index] = source[index];
 }
 
@@ -217,7 +221,7 @@ bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
     if(rightArr.data == data) // Self comparison
         return true;
 
-    for(size_t index = 0; index < size; index++)    // Iterate on both arrays
+    for(size_t index = 0; index < size; ++index)    // Iterate on both arrays
         if((*this)[index] != rightArr[index])       // operator== must have been overloaded for non-built-in types
             return false;                           // Return false in case of an inequal element
 
@@ -254,7 +258,7 @@ Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
     size = rightArr.getSize();          // Determine new array size
 
     // Element wise copy
-    for(size_t index = 0; index < rightArr.getSize(); index++)
+    for(size_t index = 0; index < rightArr.getSize(); ++index)
         data[index] = rightArr[index];
 
     return *this;
@@ -292,7 +296,7 @@ Array<T>& Array<T>::operator=(const Array&& rightArr) noexcept
 template<class T>
 Array<T>& Array<T>::Fill(const T& fillValue) noexcept
 {
-    for (size_t index = 0; index < size; index++)
+    for (size_t index = 0; index < size; ++index)
         data[index] = fillValue;
 
     return *this;
@@ -333,7 +337,7 @@ Array<T>& Array<T>::Swap(Array<T>& anotherArray) noexcept
 template<class T>
 std::ostream& operator<<(std::ostream& stream, const Array<T>& array) noexcept
 {
-    for(size_t index = 0; index < array.getSize(); index++)
+    for(size_t index = 0; index < array.getSize(); ++index)
         stream << array[index] << " ";
 
     return stream;  // Return reference to support cascade streaming
@@ -351,7 +355,7 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array) noexcept
 template<class T>
 std::istream& operator>>(std::istream& stream, Array<T>& array) noexcept
 {
-    for(size_t index = 0; index < array.getSize(); index++)
+    for(size_t index = 0; index < array.getSize(); ++index)
         stream >> array[index];
 
     return stream;  // Return reference to support cascade streaming

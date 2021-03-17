@@ -29,14 +29,19 @@
 #define ARRAY_CONTAINER_H
 
 /** Libraries **/
-#include <iostream>
+#include <ostream>
+#include <istream>
+#include <cstddef>
+#include <stdexcept>
+#include <initializer_list>
+#include <cassert>
 
 template<class T>
 class Array{
 public:
     /*** Constructors and Destructors ***/
-    Array(const size_t arraySize = 0);                  // Construct by size
-    Array(const Array& copyArr);                        // Copy constructor
+    Array(const size_t arraySize = 0) noexcept;         // Construct by size
+    Array(const Array& copyArr) noexcept;               // Copy constructor
     Array(const Array&& moveArr) noexcept;              // Move constructor
     Array(const T* const source, const size_t size);    // Construct via C-Style array
     Array(std::initializer_list<T> initializerList);    // Construct with initializer list
@@ -66,7 +71,7 @@ public:
     Array& Swap(Array& anotherArray) noexcept;
 
     /*** Status Checkers ***/
-    size_t getSize() const noexcept  { return (data == nullptr) ? 0 : size; }
+    size_t getSize() const noexcept  { return size; }
 
     /*** Iterators ***/
     /* Pointers can be used as iterator as the data structure of the container is completely linear */
@@ -90,7 +95,7 @@ private:
  * @throws  std::logic_error When size is zero
  */
 template<class T>
-Array<T>::Array(const size_t arraySize)
+Array<T>::Array(const size_t arraySize) noexcept
     : size(arraySize), data(new T[size])
 {
     /* No operation required */
@@ -102,7 +107,7 @@ Array<T>::Array(const size_t arraySize)
  * @throws  std::logic_error When size is zero
  */
 template<class T>
-Array<T>::Array(const Array<T>& copyArr)
+Array<T>::Array(const Array<T>& copyArr) noexcept
 : size(copyArr.getSize()), data(new T[size])
 {
     for(size_t index = 0; index < size; ++index)    // Element wise copy
@@ -112,7 +117,6 @@ Array<T>::Array(const Array<T>& copyArr)
 /**
  * @brief   Move constructor
  * @param   moveArr     Source array, created locally
- * @throws  std::logic_error When size is zero
  */
 template<class T>
 Array<T>::Array(const Array<T>&& moveArr) noexcept
@@ -129,7 +133,6 @@ Array<T>::Array(const Array<T>&& moveArr) noexcept
  * @brief   Construct with C-Style array
  * @param   source  Source array
  * @param   size    Source array size
- * @throws  std::logic_error When size is zero
  * @throws  std::logic_error When source is invalid
  */
 template<class T>
@@ -146,7 +149,6 @@ Array<T>::Array(const T* const source, const size_t size)
 /**
  * @brief   Construction with initializer list
  * @param   initializerList   Initializer list
- * @throws  std::logic_error When size of initializer list is zero
  */
 template<class T>
 Array<T>::Array(std::initializer_list<T> initializerList)
@@ -329,7 +331,7 @@ Array<T>& Array<T>::Swap(Array<T>& anotherArray) noexcept
  *          of them will always be members of type ostream or istream.
  */
 template<class T>
-std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
+std::ostream& operator<<(std::ostream& stream, const Array<T>& array) noexcept
 {
     for(size_t index = 0; index < array.getSize(); index++)
         stream << array[index] << " ";
@@ -347,7 +349,7 @@ std::ostream& operator<<(std::ostream& stream, const Array<T>& array)
  *          of them will always be members of type ostream or istream.
  */
 template<class T>
-std::istream& operator>>(std::istream& stream, Array<T>& array)
+std::istream& operator>>(std::istream& stream, Array<T>& array) noexcept
 {
     for(size_t index = 0; index < array.getSize(); index++)
         stream >> array[index];

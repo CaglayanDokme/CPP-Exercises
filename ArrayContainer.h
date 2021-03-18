@@ -40,6 +40,14 @@
 #include <initializer_list>
 #include <cassert>
 
+/** Special definitions **/
+// If the C++ version is greater or equal to 2017xx
+#if __cplusplus >= 201703l
+#define NODISCARD [[nodiscard]]
+#else
+#define NODISCARD
+#endif
+
 template<class T>
 class Array{
 public:
@@ -53,29 +61,29 @@ public:
     virtual ~Array(); // Destructor defined virtual to support efficient polymorphism
 
     /*** Operator Overloadings ***/
-    [[nodiscard]] const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
-    [[nodiscard]] T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
+    NODISCARD const T& operator[](const size_t index) const;          // Subscript operator for const objects returns rValue
+    NODISCARD T&  operator[](const size_t index);                     // Subscript operator for non-const objects returns lValue
 
-    [[nodiscard]] bool operator==(const Array& rightArr) const noexcept;           // Array comparison
-    [[nodiscard]] bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
+    NODISCARD bool operator==(const Array& rightArr) const noexcept;           // Array comparison
+    NODISCARD bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
     Array& operator=(const Array& rightArr) noexcept;   // Copy assignment
     Array& operator=(const Array&& rightArr) noexcept;  // Move assignment
 
     /*** Element Access ***/
-    [[nodiscard]] T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
-    [[nodiscard]] const T& at(const size_t position) const noexcept   { return (*this)[position]; }    // Invoke subscript operator
-    [[nodiscard]] T& First() noexcept             { return (*this)[0]; }            // Invoke subscript operator for the first element
-    [[nodiscard]] const T& First() const noexcept { return (*this)[0]; }            // Invoke subscript operator for the first element
-    [[nodiscard]] T& Last() noexcept              { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
-    [[nodiscard]] const T& Last() const noexcept  { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
+    NODISCARD T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
+    NODISCARD const T& at(const size_t position) const noexcept   { return (*this)[position]; }    // Invoke subscript operator
+    NODISCARD T& First() noexcept             { return (*this)[0]; }            // Invoke subscript operator for the first element
+    NODISCARD const T& First() const noexcept { return (*this)[0]; }            // Invoke subscript operator for the first element
+    NODISCARD T& Last() noexcept              { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
+    NODISCARD const T& Last() const noexcept  { return (*this)[size - 1]; }     // Invoke subscript operator for the last element
 
     /*** Modifiers ***/
     Array& Fill(const T& fillValue) noexcept;
     Array& Swap(Array& anotherArray) noexcept;
 
     /*** Status Checkers ***/
-    [[nodiscard]] size_t getSize() const noexcept  { return size; }
+    NODISCARD size_t getSize() const noexcept  { return size; }
 
     /*** Iterators ***/
     /* Pointers can be used as iterator as the data structure of the container is completely linear */
@@ -215,11 +223,11 @@ T& Array<T>::operator[](const size_t index)
 template<class T>
 bool Array<T>::operator==(const Array<T>& rightArr) const noexcept
 {
+    if(this == &rightArr) // Self comparison
+        return true;
+
     if(rightArr.size != size) // Size should be the same to make a proper comparison
         return false;
-
-    if(rightArr.data == data) // Self comparison
-        return true;
 
     for(size_t index = 0; index < size; ++index)    // Iterate on both arrays
         if((*this)[index] != rightArr[index])       // operator== must have been overloaded for non-built-in types

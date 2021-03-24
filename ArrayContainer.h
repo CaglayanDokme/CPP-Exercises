@@ -54,7 +54,7 @@ public:
     /*** Constructors and Destructors ***/
     Array(const size_t arraySize = 0) noexcept;         // Construct by size
     Array(const Array& copyArr) noexcept;               // Copy constructor
-    Array(const Array&& moveArr) noexcept;              // Move constructor
+    Array(Array&& moveArr) noexcept;                    // Move constructor
     Array(const T* const source, const size_t size);    // Construct via C-Style array
     Array(std::initializer_list<T> initializerList);    // Construct with initializer list
 
@@ -131,14 +131,14 @@ Array<T>::Array(const Array<T>& copyArr) noexcept
  * @param   moveArr     Source array, created locally
  */
 template<class T>
-Array<T>::Array(const Array<T>&& moveArr) noexcept
+Array<T>::Array(Array<T>&& moveArr) noexcept
 : size(moveArr.getSize()), data(moveArr.data)
 {
     /* No need to make an element wise copy as the source is
        a constant array. Assigning a nullptr to moveArr's container
        prevents destroying its content as we used its resources
        to construct the new one.*/
-    const_cast<Array<T>&>(moveArr).data = nullptr;
+    moveArr.data = nullptr;
 }
 
 /**

@@ -36,7 +36,8 @@
 #define LIST_CONTAINER_H
 
 /*** Libraries ***/
-#include <ostream>
+#include <ostream>  // For stream operators
+#include <cstddef>  // For std::size_t
 
 template<class T>
 class List{
@@ -49,10 +50,10 @@ public:
 
     /*** Constructors and Destructors ***/
     List();                     // Default constructor
-    List(const size_t n);       // Construct with n nodes initally
+    List(const std::size_t n);       // Construct with n nodes initally
 
     template<class... Args>
-    List(const size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
+    List(const std::size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
 
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
@@ -96,7 +97,7 @@ public:
 
     /*** Operations ***/
     void Swap(List& anotherList);                                   // Exchanges the content of the list by the content of another list
-    void Resize(const size_t newSize, const T& data = 0);           // Resizes the list so that it contains newSize of elements
+    void Resize(const std::size_t newSize, const T& data = 0);           // Resizes the list so that it contains newSize of elements
     void MakeUnique();                                              // Remove duplicate values
     void Sort();                                                    // Sorts in ascending order
     void Merge(List& anotherList);                                  // Merges two sorted list
@@ -105,7 +106,7 @@ public:
 
     /*** Status Checkers ***/
     bool isEmpty() const        { return (numberOfNodes == 0);                  }
-    size_t GetNodeCount() const { return numberOfNodes;                         }
+    std::size_t GetNodeCount() const { return numberOfNodes;                         }
     bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
 
     /*** Operator Overloadings ***/
@@ -195,7 +196,7 @@ private:
     /*** Members ***/
     ListNode* firstPtr   = nullptr;  // First node of the list
     ListNode* lastPtr    = nullptr;  // Last node of the list
-    size_t numberOfNodes    = 0;        // Node count
+    std::size_t numberOfNodes    = 0;        // Node count
 
     class ListNode{
         friend class List;
@@ -240,7 +241,7 @@ List<T>::List()
  * @param   n   Size of initial construction nodes.
  */
 template<class T>
-List<T>::List (const size_t n)
+List<T>::List (const std::size_t n)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append n nodes to empty list by in place construction
@@ -255,7 +256,7 @@ List<T>::List (const size_t n)
  */
 template<class T>
 template<class... Args>
-List<T>::List(const size_t n, Args&&... args)
+List<T>::List(const std::size_t n, Args&&... args)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append n nodes to empty list by in place construction
@@ -753,7 +754,7 @@ void List<T>::Swap(List<T>& anotherList)
         return;     // Self swap is not required
 
     ListNode* tempPtr;
-    size_t tempSize;
+    std::size_t tempSize;
 
     // Swap the first nodes of each list
     tempPtr                 = firstPtr;             // Save the firstPtr of this
@@ -776,7 +777,7 @@ void List<T>::Swap(List<T>& anotherList)
  * @param data      Object whose content is copied to the appended nodes
  */
 template<class T>
-void List<T>::Resize(const size_t newSize, const T& data)
+void List<T>::Resize(const std::size_t newSize, const T& data)
 {
     // Remove excessive nodes if exists
     while(newSize < GetNodeCount())

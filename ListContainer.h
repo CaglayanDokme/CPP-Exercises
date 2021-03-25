@@ -39,10 +39,19 @@
 #include <ostream>  // For stream operators
 #include <cstddef>  // For std::size_t
 
+/*** Special definitions ***/
+#if __cplusplus >= 201703l          // If the C++ version is greater or equal to 2017xx
+#define NODISCARD [[nodiscard]]
+#else
+#define NODISCARD
+#endif
+
 template<class T>
 class List{
+private:
     /*** Forward declarations ***/
     class ListNode;
+
 public:
     /*** Forward declarations ***/
     class iterator;
@@ -65,10 +74,10 @@ public:
     virtual ~List();            // Destructor
 
     /*** Element Access ***/
-    const T& First() const; // Get the first data as an rValue
-    const T& Last() const;  // Get the last data as an rValue
-    T& First();             // Get the first data as an lValue
-    T& Last();              // Get the last data as an lValue
+    NODISCARD const T& First() const; // Get the first data as an rValue
+    NODISCARD const T& Last() const;  // Get the last data as an rValue
+    NODISCARD T& First();             // Get the first data as an lValue
+    NODISCARD T& Last();              // Get the last data as an lValue
 
     /*** Modifiers ***/
     List& Append(const T& data);     // Add after the last node
@@ -105,14 +114,14 @@ public:
     void Splice(const iterator& destination, List& anotherList);    // Transferring all elements from another list
 
     /*** Status Checkers ***/
-    bool isEmpty() const        { return (numberOfNodes == 0);                  }
-    std::size_t GetNodeCount() const { return numberOfNodes;                         }
-    bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
+    NODISCARD bool isEmpty() const        { return (numberOfNodes == 0);                  }
+    NODISCARD std::size_t GetNodeCount() const { return numberOfNodes;                         }
+    NODISCARD bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
 
     /*** Operator Overloadings ***/
-    bool operator==(const List& anotherList) const    // Compare two lists by equality
+    NODISCARD bool operator==(const List& anotherList) const    // Compare two lists by equality
     { return (firstPtr == anotherList.firstPtr); }
-    bool operator!=(const List& anotherList) const    // Compare two lists by inequality
+    NODISCARD bool operator!=(const List& anotherList) const    // Compare two lists by inequality
     { return !operator==(anotherList); }
 
     List& operator=(List sourceList)    // Copy assignment operator(source already copied at parameter list)
@@ -127,9 +136,9 @@ public:
         iterator(const List& list, ListNode* initialNode) : list(list), node(initialNode) { }
 
     public:
-        bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
-        bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
-        T& operator*()          { return node->data;                        }               // Dereference operator
+        NODISCARD bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
+        NODISCARD bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
+        NODISCARD T& operator*()          { return node->data;                        }               // Dereference operator
         void operator++()       { if(node != nullptr) node = node->nextPtr; }               // Prefix increment
         void operator++(int)    { if(node != nullptr) node = node->nextPtr; }               // Postfix increment
 
@@ -166,21 +175,21 @@ public:
 
     public:
         // Dereference operator returns constant reference to make the data non-assignable
-        const T& operator*() { return this->node->data; }  // Dereference operator
+        NODISCARD const T& operator*() { return this->node->data; }  // Dereference operator
     };
 
-    const_iterator  cbegin()    const   { return const_iterator(*this, firstPtr);  }    // Constant iterator starting from the first node
-    const_iterator  cend()      const   { return const_iterator(*this, nullptr);   }    // Constant iterator starting from past the end
-    iterator        begin()             { return iterator(*this, firstPtr);        }    // Iterator starting from the first node
-    iterator        end()               { return iterator(*this, nullptr);         }    // Iterator starting from past the end
+    NODISCARD const_iterator  cbegin()    const   { return const_iterator(*this, firstPtr);  }    // Constant iterator starting from the first node
+    NODISCARD const_iterator  cend()      const   { return const_iterator(*this, nullptr);   }    // Constant iterator starting from past the end
+    NODISCARD iterator        begin()             { return iterator(*this, firstPtr);        }    // Iterator starting from the first node
+    NODISCARD iterator        end()               { return iterator(*this, nullptr);         }    // Iterator starting from past the end
 
 private:
     /*** Searching ***/
-    ListNode* Find(const T& data, ListNode* beginByNode);
-    ListNode* FindNotOf(const T& data, ListNode* beginByNode);
-    ListNode* FindReversed(const T& data, ListNode* beginByNode);
-    ListNode* FindNotOfReversed(const T& data, ListNode* beginByNode);
-    ListNode* FindMinimum(ListNode* beginByNode);
+    NODISCARD ListNode* Find(const T& data, ListNode* beginByNode);
+    NODISCARD ListNode* FindNotOf(const T& data, ListNode* beginByNode);
+    NODISCARD ListNode* FindReversed(const T& data, ListNode* beginByNode);
+    NODISCARD ListNode* FindNotOfReversed(const T& data, ListNode* beginByNode);
+    NODISCARD ListNode* FindMinimum(ListNode* beginByNode);
 
     /*** Operations **/
     void DetachNode(ListNode* removingNode);                                    // Detaching a node from a list by not destroying the content
@@ -210,7 +219,7 @@ private:
         { /* Empty constructor */ }
 
         // Recursively checks the status of each node
-        bool isSorted() const
+        NODISCARD bool isSorted() const
         {
             if(nextPtr == nullptr)
                 return true;

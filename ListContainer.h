@@ -38,8 +38,9 @@
 #define LIST_CONTAINER_H
 
 /*** Libraries ***/
-#include <ostream>  // For stream operators
-#include <cstddef>  // For size_type
+#include <ostream>              // For stream operators
+#include <cstddef>              // For std::size_t
+#include <initializer_list>     // For std::initializer_list
 
 /*** Special definitions ***/
 #if __cplusplus >= 201703l          // If the C++ version is greater or equal to 2017xx
@@ -118,7 +119,7 @@ public:
 
     /*** Operations ***/
     void Swap(List& anotherList);                                   // Exchanges the content of the list by the content of another list
-    void Resize(const size_type newSize, const_reference data = 0);        // Resizes the list so that it contains newSize of elements
+    void Resize(const size_type newSize, const_reference data = 0); // Resizes the list so that it contains newSize of elements
     void MakeUnique();                                              // Remove duplicate values
     void Sort();                                                    // Sorts in ascending order
     void Merge(List& anotherList);                                  // Merges two sorted list
@@ -138,6 +139,8 @@ public:
 
     List& operator=(List sourceList)    // Copy assignment operator(source already copied at parameter list)
     { Swap(sourceList); return *this; } // Copy constructor must have already been implemented Check: stackoverflow.com/questions/3279543
+
+    List& operator=(std::initializer_list<T> initializerList);  // Copy assignment operator for transaction from initializer lists
 
     /*** Iterators ***/
     class iterator{
@@ -923,6 +926,22 @@ void List<T>::Splice(const iterator& destination, List<T>& anotherList)
         throw std::logic_error("Iterator had been corrupted!");
 
     Append(destination.node, anotherList);
+}
+
+/**
+ * @brief   Copy assignment operator for initializer list and linked list
+ * @param   initializerList Source list
+ * @return  lValue reference to current list to support cascaded calls
+ */
+template<class T>
+List<T>& List<T>::operator=(std::initializer_list<T> initializerList)
+{
+    EraseAll(); // Destroy all nodes first
+
+    for(const T& element : initializerList)
+        Append(element);
+
+    return *this;
 }
 
 /**

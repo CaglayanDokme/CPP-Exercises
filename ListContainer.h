@@ -26,6 +26,8 @@
  *                                -> Iterator behavior changed to support compatibility with <algorithms>
  *              March 11, 2021    -> Copy assignment operator overloaded for container.
  *              March 14, 2021    -> Iterator classes enhanced.
+ *              March 25, 2021    -> [[nodiscard]] attribute added to related functions.
+ *                                -> Standard named requirements added to class.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -37,7 +39,7 @@
 
 /*** Libraries ***/
 #include <ostream>  // For stream operators
-#include <cstddef>  // For std::size_t
+#include <cstddef>  // For size_type
 
 /*** Special definitions ***/
 #if __cplusplus >= 201703l          // If the C++ version is greater or equal to 2017xx
@@ -46,6 +48,7 @@
 #define NODISCARD
 #endif
 
+/*** Container Class ***/
 template<class T>
 class List{
 private:
@@ -53,16 +56,25 @@ private:
     class ListNode;
 
 public:
+    /*** C++ Standard Named Requirements for Containers ***/
+    typedef T               value_type;
+    typedef std::size_t     size_type;
+    typedef T&              reference;
+    typedef const T&        const_reference;
+    typedef T*              pointer;
+    typedef const T*        const_pointer;
+    typedef ptrdiff_t       difference_type;
+
     /*** Forward declarations ***/
     class iterator;
     class const_iterator;
 
     /*** Constructors and Destructors ***/
-    List();                     // Default constructor
-    List(const std::size_t n);       // Construct with n nodes initally
+    List();                             // Default constructor
+    List(const size_type n);          // Construct with n nodes initally
 
     template<class... Args>
-    List(const std::size_t n, Args&&... args);   // Construct with n nodes initially using the arguments
+    List(const size_type n, Args&&... args);   // Construct with n nodes initially using the arguments
 
     template<class AnotherIteratorType>
     List(AnotherIteratorType begin, AnotherIteratorType end);   // Range constructor
@@ -74,14 +86,14 @@ public:
     virtual ~List();            // Destructor
 
     /*** Element Access ***/
-    NODISCARD const T& First() const; // Get the first data as an rValue
-    NODISCARD const T& Last() const;  // Get the last data as an rValue
-    NODISCARD T& First();             // Get the first data as an lValue
-    NODISCARD T& Last();              // Get the last data as an lValue
+    NODISCARD const_reference First() const; // Get the first data as a constant lValue
+    NODISCARD const_reference Last() const;  // Get the last data as a constant lValue
+    NODISCARD reference First();             // Get the first data as an lValue
+    NODISCARD reference Last();              // Get the last data as an lValue
 
     /*** Modifiers ***/
-    List& Append(const T& data);     // Add after the last node
-    List& Prepend(const T& data);    // Add before the first node
+    List& Append(const_reference data);     // Add after the last node
+    List& Prepend(const_reference data);    // Add before the first node
 
     template <class... Args>
     List& EmplaceAppend(Args&&... args);     // Constructs the node element inplace
@@ -89,24 +101,24 @@ public:
     List& EmplacePrepend(Args&&... args);    // Constructs the node element inplace
 
     template<class RuleT>
-    List& RemoveIf(const RuleT& Predicate);         // Remove all fulfilling the condition of predicate
+    List& RemoveIf(const RuleT& Predicate);  // Remove all fulfilling the condition of predicate
 
     List& RemoveFirst();                     // Remove the first node
     List& RemoveLast();                      // Remove the last node
-    List& RemoveIf(const T& data);           // Remove all samples of a specific data
-    List& RemoveFirstOf(const T& data);      // Remove the first sample of a specific data
-    List& RemoveLastOf(const T& data);       // Remove the last sample of a specific data
-    List& RemoveIfNot(const T& data);        // Remove all samples which are not of a specific data
-    List& RemoveFirstNotOf(const T& data);   // Remove the first sample that is not the given data
-    List& RemoveLastNotOf(const T& data);    // Remove the last sample that is not the given data
+    List& RemoveIf(const_reference data);           // Remove all samples of a specific data
+    List& RemoveFirstOf(const_reference data);      // Remove the first sample of a specific data
+    List& RemoveLastOf(const_reference data);       // Remove the last sample of a specific data
+    List& RemoveIfNot(const_reference data);        // Remove all samples which are not of a specific data
+    List& RemoveFirstNotOf(const_reference data);   // Remove the first sample that is not the given data
+    List& RemoveLastNotOf(const_reference data);    // Remove the last sample that is not the given data
     List& EraseAll();                        // Remove all elements
-    void ReplaceAllWith(const T& oldData, const T& newData);
-    void ReplaceFirstWith(const T& oldData, const T& newData);
-    void ReplaceLastWith(const T& oldData, const T& newData);
+    void ReplaceAllWith(const_reference oldData, const_reference newData);
+    void ReplaceFirstWith(const_reference oldData, const_reference newData);
+    void ReplaceLastWith(const_reference oldData, const_reference newData);
 
     /*** Operations ***/
     void Swap(List& anotherList);                                   // Exchanges the content of the list by the content of another list
-    void Resize(const std::size_t newSize, const T& data = 0);           // Resizes the list so that it contains newSize of elements
+    void Resize(const size_type newSize, const_reference data = 0);        // Resizes the list so that it contains newSize of elements
     void MakeUnique();                                              // Remove duplicate values
     void Sort();                                                    // Sorts in ascending order
     void Merge(List& anotherList);                                  // Merges two sorted list
@@ -115,7 +127,7 @@ public:
 
     /*** Status Checkers ***/
     NODISCARD bool isEmpty() const        { return (numberOfNodes == 0);                  }
-    NODISCARD std::size_t GetNodeCount() const { return numberOfNodes;                         }
+    NODISCARD size_type GetNodeCount() const { return numberOfNodes;                         }
     NODISCARD bool isSorted() const       { return (!isEmpty() && firstPtr->isSorted());  }   // Recursively checks the status of each node
 
     /*** Operator Overloadings ***/
@@ -136,9 +148,11 @@ public:
         iterator(const List& list, ListNode* initialNode) : list(list), node(initialNode) { }
 
     public:
+        using difference_type = long;
+
         NODISCARD bool operator==(const iterator& anotherIt) { return (node == anotherIt.node);   }   // Equality operator
         NODISCARD bool operator!=(const iterator& anotherIt) { return !operator==(anotherIt);     }   // Inequality operator
-        NODISCARD T& operator*()          { return node->data;                        }               // Dereference operator
+        NODISCARD reference operator*()          { return node->data;                        }               // Dereference operator
         void operator++()       { if(node != nullptr) node = node->nextPtr; }               // Prefix increment
         void operator++(int)    { if(node != nullptr) node = node->nextPtr; }               // Postfix increment
 
@@ -175,7 +189,7 @@ public:
 
     public:
         // Dereference operator returns constant reference to make the data non-assignable
-        NODISCARD const T& operator*() { return this->node->data; }  // Dereference operator
+        NODISCARD const_reference operator*() { return this->node->data; }  // Dereference operator
     };
 
     NODISCARD const_iterator  cbegin()    const   { return const_iterator(*this, firstPtr);  }    // Constant iterator starting from the first node
@@ -185,16 +199,16 @@ public:
 
 private:
     /*** Searching ***/
-    NODISCARD ListNode* Find(const T& data, ListNode* beginByNode);
-    NODISCARD ListNode* FindNotOf(const T& data, ListNode* beginByNode);
-    NODISCARD ListNode* FindReversed(const T& data, ListNode* beginByNode);
-    NODISCARD ListNode* FindNotOfReversed(const T& data, ListNode* beginByNode);
+    NODISCARD ListNode* Find(const_reference data, ListNode* beginByNode);
+    NODISCARD ListNode* FindNotOf(const_reference data, ListNode* beginByNode);
+    NODISCARD ListNode* FindReversed(const_reference data, ListNode* beginByNode);
+    NODISCARD ListNode* FindNotOfReversed(const_reference data, ListNode* beginByNode);
     NODISCARD ListNode* FindMinimum(ListNode* beginByNode);
 
     /*** Operations **/
     void DetachNode(ListNode* removingNode);                                    // Detaching a node from a list by not destroying the content
     void RemoveNode(ListNode* removingNode);                                    // Remove a specific node
-    List& RemoveIf(const T& data, ListNode* beginByNode);                       // Remove all samples of a specific data
+    List& RemoveIf(const_reference data, ListNode* beginByNode);                       // Remove all samples of a specific data
     void SwapNodes(ListNode* firstNode, ListNode* secondNode);                  // Swap different nodes
     void SwapSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);        // Swap directly linked nodes
     void SwapNonSuccessiveNodes(ListNode* firstNode, ListNode* secondNode);     // Swap indirectly linked nodes
@@ -205,13 +219,13 @@ private:
     /*** Members ***/
     ListNode* firstPtr   = nullptr;  // First node of the list
     ListNode* lastPtr    = nullptr;  // Last node of the list
-    std::size_t numberOfNodes    = 0;        // Node count
+    size_type numberOfNodes    = 0;        // Node count
 
     class ListNode{
         friend class List;
 
     public:
-        ListNode(const T& data) : data(data), prevPtr(nullptr), nextPtr(nullptr)
+        ListNode(const_reference data) : data(data), prevPtr(nullptr), nextPtr(nullptr)
         { /* Empty constructor */ }
 
         template<class... Args>
@@ -231,7 +245,7 @@ private:
         }
 
     private:
-        T data;
+        value_type data;
         ListNode* prevPtr = nullptr;
         ListNode* nextPtr = nullptr;
     };
@@ -250,7 +264,7 @@ List<T>::List()
  * @param   n   Size of initial construction nodes.
  */
 template<class T>
-List<T>::List (const std::size_t n)
+List<T>::List (const size_type n)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append n nodes to empty list by in place construction
@@ -265,7 +279,7 @@ List<T>::List (const std::size_t n)
  */
 template<class T>
 template<class... Args>
-List<T>::List(const std::size_t n, Args&&... args)
+List<T>::List(const size_type n, Args&&... args)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append n nodes to empty list by in place construction
@@ -350,7 +364,7 @@ List<T>::List(std::initializer_list<T> initializerList)
 : firstPtr(nullptr), lastPtr(nullptr), numberOfNodes(0)
 {
     // Append each element by using a range-for
-    for(const T& element : initializerList)
+    for(const_reference element : initializerList)
         Append(element);
 }
 
@@ -371,7 +385,7 @@ List<T>::~List()
  * @return  lValue reference to the current list to support cascades
  */
 template<class T>
-List<T>& List<T>::Append(const T& data)
+List<T>& List<T>::Append(const_reference data)
 {
     if(isEmpty() == true)  // If it is the first node
     {
@@ -397,7 +411,7 @@ List<T>& List<T>::Append(const T& data)
  * @return  lValue reference to the current list to support cascades
  */
 template<class T>
-List<T>& List<T>::Prepend(const T& data)
+List<T>& List<T>::Prepend(const_reference data)
 {
     if(isEmpty() == true)   // If it is the first node
     {
@@ -469,7 +483,7 @@ List<T>& List<T>::EmplacePrepend(Args&&... args)
 
 /**
  * @brief   Iterator to reach to the first element.
- * @return  rValue reference to the data of first node.
+ * @return  Constant lValue reference to the data of first node.
  * @throws  std::logic_error If the list is empty
  */
 template<class T>
@@ -483,7 +497,7 @@ const T& List<T>::First() const
 
 /**
  * @brief   Iterator to reach to the last element.
- * @return  rValue reference to the data of last node.
+ * @return  Constant lValue reference to the data of last node.
  * @throws  std::logic_error If the list is empty
  */
 template<class T>
@@ -602,7 +616,7 @@ List<T>& List<T>::RemoveLast()
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveIf(const T& data)
+List<T>& List<T>::RemoveIf(const_reference data)
 {
     // Remove by starting from the first node
     return RemoveIf(data, firstPtr);
@@ -614,7 +628,7 @@ List<T>& List<T>::RemoveIf(const T& data)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveFirstOf(const T& data)
+List<T>& List<T>::RemoveFirstOf(const_reference data)
 {
     RemoveNode(Find(data, firstPtr));   // Find and remove the first sample
 
@@ -627,7 +641,7 @@ List<T>& List<T>::RemoveFirstOf(const T& data)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveLastOf(const T& data)
+List<T>& List<T>::RemoveLastOf(const_reference data)
 {
     RemoveNode(FindReversed(data, lastPtr));   // Find and remove the last sample
 
@@ -640,7 +654,7 @@ List<T>& List<T>::RemoveLastOf(const T& data)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveIfNot(const T& data)
+List<T>& List<T>::RemoveIfNot(const_reference data)
 {
     ListNode* removingNode;      // Node to be removed
     ListNode* searchStartPoint;  // Node where the search will start
@@ -664,7 +678,7 @@ List<T>& List<T>::RemoveIfNot(const T& data)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveFirstNotOf(const T& data)
+List<T>& List<T>::RemoveFirstNotOf(const_reference data)
 {
     // Find and remove the first sample not of given data
     RemoveNode(FindNotOf(data, firstPtr));
@@ -678,7 +692,7 @@ List<T>& List<T>::RemoveFirstNotOf(const T& data)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveLastNotOf(const T& data)
+List<T>& List<T>::RemoveLastNotOf(const_reference data)
 {
     // Find and remove the last sample not of given data
     RemoveNode(FindNotOfReversed(data, lastPtr));
@@ -706,7 +720,7 @@ List<T>& List<T>::EraseAll()
  * @param   newData Replace value
  */
 template<class T>
-void List<T>::ReplaceAllWith(const T& oldData, const T& newData)
+void List<T>::ReplaceAllWith(const_reference oldData, const_reference newData)
 {
     ListNode* currentNode = firstPtr;
 
@@ -728,7 +742,7 @@ void List<T>::ReplaceAllWith(const T& oldData, const T& newData)
  * @param   newData Replace value
  */
 template<class T>
-void List<T>::ReplaceFirstWith(const T& oldData, const T& newData)
+void List<T>::ReplaceFirstWith(const_reference oldData, const_reference newData)
 {
     ListNode* currentNode = Find(oldData, firstPtr);
 
@@ -742,7 +756,7 @@ void List<T>::ReplaceFirstWith(const T& oldData, const T& newData)
  * @param   newData Replace value
  */
 template<class T>
-void List<T>::ReplaceLastWith(const T& oldData, const T& newData)
+void List<T>::ReplaceLastWith(const_reference oldData, const_reference newData)
 {
     ListNode* currentNode = FindReversed(oldData, lastPtr);
 
@@ -763,7 +777,7 @@ void List<T>::Swap(List<T>& anotherList)
         return;     // Self swap is not required
 
     ListNode* tempPtr;
-    std::size_t tempSize;
+    size_type tempSize;
 
     // Swap the first nodes of each list
     tempPtr                 = firstPtr;             // Save the firstPtr of this
@@ -786,7 +800,7 @@ void List<T>::Swap(List<T>& anotherList)
  * @param data      Object whose content is copied to the appended nodes
  */
 template<class T>
-void List<T>::Resize(const std::size_t newSize, const T& data)
+void List<T>::Resize(const size_type newSize, const_reference data)
 {
     // Remove excessive nodes if exists
     while(newSize < GetNodeCount())
@@ -920,7 +934,7 @@ void List<T>::Splice(const iterator& destination, List<T>& anotherList)
  * @note    The algorithm used is the linear search as there are no value-based relation between nodes.
  */
 template<class T>
-typename List<T>::ListNode* List<T>::Find(const T& data, ListNode* beginByNode)
+typename List<T>::ListNode* List<T>::Find(const_reference data, ListNode* beginByNode)
 {
     // Search begins by the given node
     ListNode* currentNode = beginByNode;
@@ -947,7 +961,7 @@ typename List<T>::ListNode* List<T>::Find(const T& data, ListNode* beginByNode)
  * @note    The algorithm used is the linear search as there are no value-based relation between nodes.
  */
 template<class T>
-typename List<T>::ListNode* List<T>::FindNotOf(const T& data, ListNode* beginByNode)
+typename List<T>::ListNode* List<T>::FindNotOf(const_reference data, ListNode* beginByNode)
 {
     // Search begins by the given node
     ListNode* currentNode = beginByNode;
@@ -974,7 +988,7 @@ typename List<T>::ListNode* List<T>::FindNotOf(const T& data, ListNode* beginByN
  * @note    The algorithm used is the reversed linear search as there are no value-based relation between nodes.
  */
 template<class T>
-typename List<T>::ListNode* List<T>::FindReversed(const T& data, ListNode* beginByNode)
+typename List<T>::ListNode* List<T>::FindReversed(const_reference data, ListNode* beginByNode)
 {
     // Search begins by the given node
     ListNode* currentNode = beginByNode;
@@ -1001,7 +1015,7 @@ typename List<T>::ListNode* List<T>::FindReversed(const T& data, ListNode* begin
  * @note    The algorithm used is the reversed linear search as there are no value-based relation between nodes.
  */
 template<class T>
-typename List<T>::ListNode* List<T>::FindNotOfReversed(const T& data, ListNode* beginByNode)
+typename List<T>::ListNode* List<T>::FindNotOfReversed(const_reference data, ListNode* beginByNode)
 {
     // Search begins by the given node
     ListNode* currentNode = beginByNode;
@@ -1109,7 +1123,7 @@ void List<T>::RemoveNode(ListNode* removingNode)
  * @return  lValue reference to the list to support cascaded calls
  */
 template<class T>
-List<T>& List<T>::RemoveIf(const T& data, ListNode* beginByNode)
+List<T>& List<T>::RemoveIf(const_reference data, ListNode* beginByNode)
 {
     ListNode* removingNode;      // Node to be removed
     ListNode* searchStartPoint;  // Node where the search will start again from

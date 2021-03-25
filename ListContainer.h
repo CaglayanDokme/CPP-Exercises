@@ -28,6 +28,7 @@
  *              March 14, 2021    -> Iterator classes enhanced.
  *              March 25, 2021    -> [[nodiscard]] attribute added to related functions.
  *                                -> Standard named requirements added to class.
+ *                                -> Copy assignment operator added for copying from std::initializer_list
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.

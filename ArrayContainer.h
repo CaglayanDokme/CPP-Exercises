@@ -68,7 +68,7 @@ public:
     NODISCARD bool operator!=(const Array& rightArr) const noexcept;           // Array comparison by inequality
 
     Array& operator=(const Array& rightArr) noexcept;   // Copy assignment
-    Array& operator=(const Array&& rightArr) noexcept;  // Move assignment
+    Array& operator=(Array&& rightArr) noexcept;  // Move assignment
 
     /*** Element Access ***/
     NODISCARD T& at(const size_t position) noexcept               { return (*this)[position]; }    // Invoke subscript operator
@@ -138,7 +138,8 @@ Array<T>::Array(Array<T>&& moveArr) noexcept
        a constant array. Assigning a nullptr to moveArr's container
        prevents destroying its content as we used its resources
        to construct the new one.*/
-    moveArr.data = nullptr;
+    if(this != &moveArr)    // Self move
+        moveArr.data = nullptr;
 }
 
 /**
@@ -278,7 +279,7 @@ Array<T>& Array<T>::operator=(const Array<T>& rightArr) noexcept
  * @return  lValue reference to resulting array to support cascaded assignments(e.g. arr = arr1 = arr2)
  */
 template<class T>
-Array<T>& Array<T>::operator=(const Array&& rightArr) noexcept
+Array<T>& Array<T>::operator=(Array&& rightArr) noexcept
 {
     if(this == &rightArr)
         return *this;
@@ -291,7 +292,7 @@ Array<T>& Array<T>::operator=(const Array&& rightArr) noexcept
     size = rightArr.size;
 
     // Prevent destrutcion of the stolen resource
-    const_cast<Array<T>&>(rightArr).data = nullptr;
+    rightArr.data = nullptr;
 
     return *this;
 }

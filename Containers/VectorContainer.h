@@ -15,6 +15,7 @@
 /*** Libraries ***/
 #include <cstddef>              // For std::size_t, ptrdiff_t
 #include <initializer_list>     // For std::initializer_list
+#include <stdexcept>            // For exceptions
 
 /*** Container Class ***/
 template<class T>
@@ -48,6 +49,19 @@ public:
     Vector& operator=(Vector&& moveVector);                                 // Move assignment operator
     Vector& operator=(std::initializer_list<value_type> initializerList);   // Initializer list assignment operator
 
+    reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
+    const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
+
+    /*** Element Access ***/
+    reference       at(const size_type position);
+    const_reference at(const size_type position) const;
+
+    reference       front()         { return data[0]; }
+    const_reference front() const   { return data[0]; }
+
+    reference back()                { return data[sz]; }
+    const_reference back() const    { return data[sz]; }
+
     /*** Iterators ***/
     iterator begin()                { return data;      }
     iterator end()                  { return data + sz; }
@@ -56,16 +70,16 @@ public:
     const_iterator cbegin() const   { return data;      }
     const_iterator cend()   const   { return data + sz; }
 
-    /*** Status Checkers ***/
-    size_type size() const { return sz; }
-    // size_type max_size() const {}        // TODO Search for implementation
+    /*** Size and Capacity Checkers ***/
+    size_type size()        const { return sz;          }
+    size_type capacity()    const { return cap;         }
+    // size_type max_size() const {                     }        // TODO Search for implementation
+    bool empty()            const { return (sz == 0);   }
+
     void resize(const size_type newSize);
     void resize(const size_type newSize, const value_type& fillValue);
-    size_type capacity() const { return cap; }
-    bool empty() const { return (sz == 0); }
     void reserve(const size_type reservationSize);
     void shrink_to_fit();
-
 
 private:
     /*** Members ***/
@@ -244,6 +258,24 @@ Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerLis
     }
 
     return *this;
+}
+
+template<class T>
+T& Vector<T>::at(const size_type position)
+{
+    if(position < sz)
+        return data[position];
+
+    throw(std::out_of_range("Index is out-of-range!"));
+}
+
+template<class T>
+const T& Vector<T>::at(const size_type position) const
+{
+    if(position < sz)
+        return data[position];
+
+    throw(std::out_of_range("Index is out-of-range!"));
 }
 
 template<class T>

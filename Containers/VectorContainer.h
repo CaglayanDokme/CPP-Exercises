@@ -37,32 +37,37 @@ public:
     template<class InputIterator>
     Vector(InputIterator first, InputIterator last);                        // Range constructor
 
+    Vector(const Vector& copyVector);                                       // Copy constructor
+
     /*** Iterators ***/
     iterator begin()                { return data;          }
-    iterator end()                  { return data + size;   }
+    iterator end()                  { return data + dataSize;   }
     const_iterator begin()  const   { return data;          }
-    const_iterator end()    const   { return data + size;   }
+    const_iterator end()    const   { return data + dataSize;   }
     const_iterator cbegin() const   { return data;          }
-    const_iterator cend()   const   { return data + size;   }
+    const_iterator cend()   const   { return data + dataSize;   }
+
+    /*** Status Checkers ***/
+    size_type size() const { return dataSize; }
 
 private:
     /*** Members ***/
-    size_type size;
-    T* data;
+    size_type dataSize = 0;
+    T* data = nullptr;
 };
 
 template<class T>
-Vector<T>::Vector() : size(0), data(nullptr)
+Vector<T>::Vector() : dataSize(0), data(nullptr)
 { /* Empty constructor */ }
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements)
-: size(numberOfElements), data(new value_type[numberOfElements])
+: dataSize(numberOfElements), data(new value_type[numberOfElements])
 { /* Empty constructor */ }
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
-: size(numberOfElements), data(new value_type[numberOfElements])
+: dataSize(numberOfElements), data(new value_type[numberOfElements])
 {
     for(reference element : *this)
         element = fillValue;
@@ -76,7 +81,7 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
 
     if(numberOfElements > 0)
     {
-        size = numberOfElements;
+        dataSize = numberOfElements;
         data = new value_type[numberOfElements];
 
         for(size_type index = 0; (index < numberOfElements) && (first != last); ++index, ++first)
@@ -84,8 +89,20 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
     }
     else
     {
-        size = 0;
+        dataSize = 0;
         data = nullptr;
     }
 }
+
+template<class T>
+Vector<T>::Vector(const Vector& copyVector)
+: dataSize(copyVector.size()), data(new value_type[copyVector.size()])
+{
+    const_iterator sourceIt = copyVector.cbegin();
+    iterator destIt = begin();
+
+    for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
+        *destIt = *sourceIt;
+}
+
 #endif

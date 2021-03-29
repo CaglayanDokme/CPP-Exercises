@@ -39,6 +39,7 @@ public:
 
     Vector(const Vector& copyVector);                                       // Copy constructor
     Vector(Vector&& moveVector);                                            // Move constructor
+    Vector(std::initializer_list<value_type> initializerList);              // Initializer list constructor
 
     /*** Iterators ***/
     iterator begin()                { return data;          }
@@ -112,6 +113,19 @@ Vector<T>::Vector(Vector&& moveVector)
 {
     moveVector.dataSize = 0;
     moveVector.data     = nullptr;  // Source stolen
+}
+
+template<class T>
+Vector<T>::Vector(std::initializer_list<value_type> initializerList)
+: dataSize(initializerList.size()), data(new T[initializerList.size()])
+{
+    iterator destIt = begin();
+
+    for(const value_type& element : initializerList)
+    {
+        *destIt = element;
+        ++destIt;
+    }
 }
 
 #endif

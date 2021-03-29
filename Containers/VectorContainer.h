@@ -45,6 +45,7 @@ public:
 
     /*** Operator Overloadings ***/
     Vector& operator=(const Vector& copyVector);    // Copy assignment operator
+    Vector& operator=(Vector&& moveVector);         // Move assignment operator
 
     /*** Iterators ***/
     iterator begin()                { return data;          }
@@ -146,7 +147,7 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
     if(this == &copyVector) // Check self assignment
         return *this;
 
-    // Destroy resource of left vector
+    // Destroy resource of the left vector
     dataSize = 0;
     delete [] data;
 
@@ -160,6 +161,29 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
 
     for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
         *destIt = *sourceIt;
+
+    return *this;
+}
+
+template<class T>
+Vector<T>& Vector<T>::operator=(Vector&& moveVector)
+{
+    if(this == &moveVector) // Check self assignment
+        return *this;
+
+    // Destroy resource of the left vector
+    dataSize = 0;
+    delete [] data;
+
+    // Steal resources of move(right) vector
+    dataSize    = moveVector.size();
+    data        = moveVector.data;
+
+    // Prevent destruction of stolen resource
+    moveVector.dataSize = 0;
+    moveVector.data     = nullptr;
+
+    return *this;
 }
 
 #endif

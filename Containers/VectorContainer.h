@@ -43,6 +43,9 @@ public:
 
     ~Vector();  // Destructor
 
+    /*** Operator Overloadings ***/
+    Vector& operator=(const Vector& copyVector);    // Copy assignment operator
+
     /*** Iterators ***/
     iterator begin()                { return data;          }
     iterator end()                  { return data + dataSize;   }
@@ -135,6 +138,28 @@ Vector<T>::~Vector()
 {
     dataSize = 0;
     delete [] data;
+}
+
+template<class T>
+Vector<T>& Vector<T>::operator=(const Vector& copyVector)
+{
+    if(this == &copyVector) // Check self assignment
+        return *this;
+
+    // Destroy resource of left vector
+    dataSize = 0;
+    delete [] data;
+
+    // Allocate space for incoming elements
+    dataSize = copyVector.size();
+    data = new value_type[copyVector.size()];
+
+    // Copy elements
+    const_iterator sourceIt = copyVector.cbegin();
+    iterator destIt = begin();
+
+    for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
+        *destIt = *sourceIt;
 }
 
 #endif

@@ -30,9 +30,17 @@ public:
     typedef size_t      size_type;
 
     /*** Constructors and Destructors ***/
-    Vector();                                   // Default constructor
-    Vector(const size_type numberOfElements);   // Fill constructor
+    Vector();                                                               // Default constructor
+    Vector(const size_type numberOfElements);                               // Fill constructor
+    Vector(const size_type numberOfElements, const value_type& fillValue);  // Fill construcotr with fill value
 
+    /*** Iterators ***/
+    iterator begin()                { return data;          }
+    iterator end()                  { return data + size;   }
+    const_iterator begin()  const   { return data;          }
+    const_iterator end()    const   { return data + size;   }
+    const_iterator cbegin() const   { return data;          }
+    const_iterator cend()   const   { return data + size;   }
 private:
     size_type size;
     T* data;
@@ -46,5 +54,13 @@ template<class T>
 Vector<T>::Vector(const size_type numberOfElements)
 : size(numberOfElements), data(new value_type[numberOfElements])
 { /* Empty constructor */ }
+
+template<class T>
+Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
+: size(numberOfElements), data(new value_type[numberOfElements])
+{
+    for(reference element : *this)
+        element = fillValue;
+}
 
 #endif

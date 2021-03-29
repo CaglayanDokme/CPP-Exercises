@@ -64,6 +64,7 @@ public:
     size_type capacity() const { return cap; }
     bool empty() const { return (sz == 0); }
     void reserve(const size_type reservationSize);
+    void shrink_to_fit();
 
 
 private:
@@ -299,6 +300,23 @@ void Vector<T>::reserve(const size_type reservationSize)
     delete [] data; // Destroy old resource
 
     cap     = reservationSize;
+    data    = newArea;
+}
+
+template<class T>
+void Vector<T>::shrink_to_fit()
+{
+    if((sz == 0) || (sz == cap))
+        return;
+
+    value_type* newArea = new value_type[sz];
+
+    for(size_type index = 0; index < size(); ++index)
+        newArea[index] = data[index];
+
+    delete [] data; // Destroy old resource
+
+    cap     = sz;
     data    = newArea;
 }
 

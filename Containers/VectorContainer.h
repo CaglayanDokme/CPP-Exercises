@@ -38,6 +38,7 @@ public:
     Vector(InputIterator first, InputIterator last);                        // Range constructor
 
     Vector(const Vector& copyVector);                                       // Copy constructor
+    Vector(Vector&& moveVector);                                            // Move constructor
 
     /*** Iterators ***/
     iterator begin()                { return data;          }
@@ -103,6 +104,14 @@ Vector<T>::Vector(const Vector& copyVector)
 
     for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
         *destIt = *sourceIt;
+}
+
+template<class T>
+Vector<T>::Vector(Vector&& moveVector)
+: dataSize(moveVector.size()), data(moveVector.data)
+{
+    moveVector.dataSize = 0;
+    moveVector.data     = nullptr;  // Source stolen
 }
 
 #endif

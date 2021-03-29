@@ -28,19 +28,19 @@
  *  @copyright  No copyright.
  */
 
-/** Recursive inclusion preventer **/
+/*** Recursive inclusion preventer ***/
 #ifndef ARRAY_CONTAINER_H
 #define ARRAY_CONTAINER_H
 
-/** Libraries **/
-#include <ostream>
-#include <istream>
-#include <cstddef>
-#include <stdexcept>
-#include <initializer_list>
-#include <cassert>
+/*** Libraries ***/
+#include <ostream>              // For output streams
+#include <istream>              // For input streams
+#include <cstddef>              // For size_t
+#include <stdexcept>            // For exceptions
+#include <initializer_list>     // For initializer list
+#include <cassert>              // For assertions
 
-/** Special definitions **/
+/*** Special definitions ***/
 // If the C++ version is greater or equal to 2017xx
 #if __cplusplus >= 201703l
 #define NODISCARD [[nodiscard]]
@@ -48,6 +48,7 @@
 #define NODISCARD
 #endif
 
+/*** Container Class ***/
 template<class T>
 class Array{
 public:

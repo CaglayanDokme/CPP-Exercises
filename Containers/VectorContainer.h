@@ -34,6 +34,9 @@ public:
     Vector(const size_type numberOfElements);                               // Fill constructor
     Vector(const size_type numberOfElements, const value_type& fillValue);  // Fill construcotr with fill value
 
+    template<class InputIterator>
+    Vector(InputIterator first, InputIterator last);                        // Range constructor
+
     /*** Iterators ***/
     iterator begin()                { return data;          }
     iterator end()                  { return data + size;   }
@@ -41,7 +44,9 @@ public:
     const_iterator end()    const   { return data + size;   }
     const_iterator cbegin() const   { return data;          }
     const_iterator cend()   const   { return data + size;   }
+
 private:
+    /*** Members ***/
     size_type size;
     T* data;
 };
@@ -63,4 +68,24 @@ Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
         element = fillValue;
 }
 
+template<class T>
+template<class InputIterator>
+Vector<T>::Vector(InputIterator first, InputIterator last)
+{
+    const difference_type numberOfElements = last - first;
+
+    if(numberOfElements > 0)
+    {
+        size = numberOfElements;
+        data = new value_type[numberOfElements];
+
+        for(size_type index = 0; (index < numberOfElements) && (first != last); ++index, ++first)
+            data[index] = *first;
+    }
+    else
+    {
+        size = 0;
+        data = nullptr;
+    }
+}
 #endif

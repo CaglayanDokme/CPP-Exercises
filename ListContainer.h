@@ -199,7 +199,9 @@ public:
     NODISCARD const_iterator  cbegin()    const   { return const_iterator(*this, firstPtr);  }    // Constant iterator starting from the first node
     NODISCARD const_iterator  cend()      const   { return const_iterator(*this, nullptr);   }    // Constant iterator starting from past the end
     NODISCARD iterator        begin()             { return iterator(*this, firstPtr);        }    // Iterator starting from the first node
+    NODISCARD const_iterator  begin()     const   { return const_iterator(*this, firstPtr);  }    // Iterator starting from the first node
     NODISCARD iterator        end()               { return iterator(*this, nullptr);         }    // Iterator starting from past the end
+    NODISCARD const_iterator  end()       const   { return const_iterator(*this, nullptr);   }    // Constant iterator starting from past the end
 
 private:
     /*** Searching ***/

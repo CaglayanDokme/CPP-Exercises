@@ -41,6 +41,8 @@ public:
     Vector(Vector&& moveVector);                                            // Move constructor
     Vector(std::initializer_list<value_type> initializerList);              // Initializer list constructor
 
+    ~Vector();  // Destructor
+
     /*** Iterators ***/
     iterator begin()                { return data;          }
     iterator end()                  { return data + dataSize;   }
@@ -126,6 +128,13 @@ Vector<T>::Vector(std::initializer_list<value_type> initializerList)
         *destIt = element;
         ++destIt;
     }
+}
+
+template<class T>
+Vector<T>::~Vector()
+{
+    dataSize = 0;
+    delete [] data;
 }
 
 #endif

@@ -59,6 +59,8 @@ public:
     /*** Status Checkers ***/
     size_type size() const { return sz; }
     // size_type max_size() const {}        // TODO Search for implementation
+    void resize(const size_type newSize);
+    void resize(const size_type newSize, const value_type& fillValue);
     size_type capacity() const { return cap; }
     bool empty() const { return (sz == 0); }
 
@@ -240,6 +242,46 @@ Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerLis
     }
 
     return *this;
+}
+
+template<class T>
+void Vector<T>::resize(const size_type newSize)
+{
+    if(newSize == capacity())
+        return;
+
+    value_type* newArea = new value_type[newSize];
+
+    for(size_type index = 0; (index < newSize) && (index < size()); ++index)
+        newArea[index] = data[index];
+
+    delete [] data; // Destroy old resource
+
+    cap     = newSize;
+    sz      = (newSize < sz) ? newSize : sz;
+    data    = newArea;
+}
+
+template<class T>
+void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
+{
+    if(newSize == capacity())
+        return;
+
+    value_type* newArea = new value_type[newSize];
+
+    size_type index = 0;
+    for(index = 0; (index < newSize) && (index < size()); ++index)
+        newArea[index] = data[index];
+
+    for( ; index < newSize; ++index)
+        newArea[index] = fillValue;
+
+    delete [] data; // Destroy old resource
+
+    cap     = newSize;
+    sz      = (newSize < sz) ? newSize : sz;
+    data    = newArea;
 }
 
 #endif

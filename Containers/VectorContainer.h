@@ -21,13 +21,13 @@ template<class T>
 class Vector{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
-    typedef T           value_type;
-    typedef T&          reference;
-    typedef const T&    const_reference;
-    typedef T*          iterator;
-    typedef const T*    const_iterator;
-    typedef ptrdiff_t   difference_type;
-    typedef size_t      size_type;
+    typedef T                value_type;
+    typedef T&               reference;
+    typedef const T&         const_reference;
+    typedef T*               iterator;
+    typedef const T*         const_iterator;
+    typedef std::ptrdiff_t   difference_type;
+    typedef std::size_t      size_type;
 
     /*** Constructors and Destructors ***/
     Vector();                                                               // Default constructor
@@ -49,34 +49,56 @@ public:
     Vector& operator=(std::initializer_list<value_type> initializerList);   // Initializer list assignment operator
 
     /*** Iterators ***/
-    iterator begin()                { return data;          }
-    iterator end()                  { return data + dataSize;   }
-    const_iterator begin()  const   { return data;          }
-    const_iterator end()    const   { return data + dataSize;   }
-    const_iterator cbegin() const   { return data;          }
-    const_iterator cend()   const   { return data + dataSize;   }
+    iterator begin()                { return data;      }
+    iterator end()                  { return data + sz; }
+    const_iterator begin()  const   { return data;      }
+    const_iterator end()    const   { return data + sz; }
+    const_iterator cbegin() const   { return data;      }
+    const_iterator cend()   const   { return data + sz; }
 
     /*** Status Checkers ***/
-    size_type size() const { return dataSize; }
+    size_type size() const { return sz; }
+    // size_type max_size() const {}        // TODO Search for implementation
+    size_type capacity() const { return cap; }
+    bool empty() const { return (sz == 0); }
+
 
 private:
     /*** Members ***/
-    size_type dataSize = 0;
-    T* data = nullptr;
+    size_type sz    = 0;
+    size_type cap   = 0;
+    T* data         = nullptr;
 };
 
+// Finds the next power of 2 which is greater than N.
+std::size_t nextPowerOf2(std::size_t N)
+{
+    if(N == 0)
+        return 0;
+
+    std::size_t maxValuedBit = 1;
+
+    while(N != 0)
+    {
+        N = N >> 1;
+        maxValuedBit = maxValuedBit << 1;
+    }
+
+    return maxValuedBit;
+}
+
 template<class T>
-Vector<T>::Vector() : dataSize(0), data(nullptr)
+Vector<T>::Vector() : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements)
-: dataSize(numberOfElements), data(new value_type[numberOfElements])
+: sz(numberOfElements), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
 { /* Empty constructor */ }
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
-: dataSize(numberOfElements), data(new value_type[numberOfElements])
+: sz(numberOfElements), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
 {
     for(reference element : *this)
         element = fillValue;
@@ -90,22 +112,24 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
 
     if(numberOfElements > 0)
     {
-        dataSize = numberOfElements;
-        data = new value_type[numberOfElements];
+        sz      = numberOfElements;
+        cap     = nextPowerOf2(sz);
+        data    = new value_type[cap];
 
-        for(size_type index = 0; (index < numberOfElements) && (first != last); ++index, ++first)
+        for(size_type index = 0; (index < cap) && (first != last); ++index, ++first)
             data[index] = *first;
     }
     else
     {
-        dataSize = 0;
-        data = nullptr;
+        sz      = 0;
+        cap     = 0;
+        data    = nullptr;
     }
 }
 
 template<class T>
 Vector<T>::Vector(const Vector& copyVector)
-: dataSize(copyVector.size()), data(new value_type[copyVector.size()])
+    : sz(copyVector.size()), cap(copyVector.capacity()), data((cap != 0) ? new value_type[cap] : nullptr)
 {
     const_iterator sourceIt = copyVector.cbegin();
     iterator destIt = begin();
@@ -116,15 +140,16 @@ Vector<T>::Vector(const Vector& copyVector)
 
 template<class T>
 Vector<T>::Vector(Vector&& moveVector)
-: dataSize(moveVector.size()), data(moveVector.data)
+: sz(moveVector.size()), cap(moveVector.capacity()), data(moveVector.data)
 {
-    moveVector.dataSize = 0;
-    moveVector.data     = nullptr;  // Source stolen
+    moveVector.sz   = 0;
+    moveVector.cap  = 0;
+    moveVector.data = nullptr;  // Source stolen
 }
 
 template<class T>
 Vector<T>::Vector(std::initializer_list<value_type> initializerList)
-: dataSize(initializerList.size()), data(new T[initializerList.size()])
+: sz(initializerList.size()), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
 {
     iterator destIt = begin();
 
@@ -138,7 +163,8 @@ Vector<T>::Vector(std::initializer_list<value_type> initializerList)
 template<class T>
 Vector<T>::~Vector()
 {
-    dataSize = 0;
+    sz  = 0;
+    cap = 0;
     delete [] data;
 }
 
@@ -149,12 +175,14 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
         return *this;
 
     // Destroy resource of the left vector
-    dataSize = 0;
+    sz  = 0;
+    cap = 0;
     delete [] data;
 
     // Allocate space for incoming elements
-    dataSize = copyVector.size();
-    data = new value_type[copyVector.size()];
+    sz      = copyVector.size();
+    cap     = copyVector.capacity();
+    data    = (cap != 0) ? new value_type[cap] : nullptr;
 
     // Copy elements
     const_iterator sourceIt = copyVector.cbegin();
@@ -173,16 +201,19 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
         return *this;
 
     // Destroy resource of the left vector
-    dataSize = 0;
+    sz = 0;
+    cap = 0;
     delete [] data;
 
     // Steal resources of move(right) vector
-    dataSize    = moveVector.size();
-    data        = moveVector.data;
+    sz      = moveVector.size();
+    cap     = moveVector.cap;
+    data    = moveVector.data;
 
     // Prevent destruction of stolen resource
-    moveVector.dataSize = 0;
-    moveVector.data     = nullptr;
+    moveVector.sz   = 0;
+    moveVector.cap  = 0;
+    moveVector.data = nullptr;
 
     return *this;
 }
@@ -191,12 +222,14 @@ template<class T>
 Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
 {
     // Destroy resource of the left vector
-    dataSize = 0;
+    sz  = 0;
+    cap = 0;
     delete [] data;
 
     // Adjust new resource
-    dataSize    = initializerList.size();
-    data        = new value_type[initializerList.size()];
+    sz      = initializerList.size();
+    cap     = nextPowerOf2(sz);
+    data    = (cap != 0) ? new value_type[cap] : nullptr;
 
     iterator destIt = begin();
 

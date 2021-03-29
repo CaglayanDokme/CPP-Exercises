@@ -63,6 +63,7 @@ public:
     void resize(const size_type newSize, const value_type& fillValue);
     size_type capacity() const { return cap; }
     bool empty() const { return (sz == 0); }
+    void reserve(const size_type reservationSize);
 
 
 private:
@@ -281,6 +282,23 @@ void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
 
     cap     = newSize;
     sz      = (newSize < sz) ? newSize : sz;
+    data    = newArea;
+}
+
+template<class T>
+void Vector<T>::reserve(const size_type reservationSize)
+{
+    if(reservationSize <= capacity())
+        return;
+
+    value_type* newArea = new value_type[reservationSize];
+
+    for(size_type index = 0; index < size(); ++index)
+        newArea[index] = data[index];
+
+    delete [] data; // Destroy old resource
+
+    cap     = reservationSize;
     data    = newArea;
 }
 

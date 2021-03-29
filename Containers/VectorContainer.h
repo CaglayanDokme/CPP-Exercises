@@ -44,8 +44,9 @@ public:
     ~Vector();  // Destructor
 
     /*** Operator Overloadings ***/
-    Vector& operator=(const Vector& copyVector);    // Copy assignment operator
-    Vector& operator=(Vector&& moveVector);         // Move assignment operator
+    Vector& operator=(const Vector& copyVector);                            // Copy assignment operator
+    Vector& operator=(Vector&& moveVector);                                 // Move assignment operator
+    Vector& operator=(std::initializer_list<value_type> initializerList);   // Initializer list assignment operator
 
     /*** Iterators ***/
     iterator begin()                { return data;          }
@@ -182,6 +183,28 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
     // Prevent destruction of stolen resource
     moveVector.dataSize = 0;
     moveVector.data     = nullptr;
+
+    return *this;
+}
+
+template<class T>
+Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
+{
+    // Destroy resource of the left vector
+    dataSize = 0;
+    delete [] data;
+
+    // Adjust new resource
+    dataSize    = initializerList.size();
+    data        = new value_type[initializerList.size()];
+
+    iterator destIt = begin();
+
+    for(const value_type& element : initializerList)
+    {
+        *destIt = element;
+        ++destIt;
+    }
 
     return *this;
 }

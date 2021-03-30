@@ -72,18 +72,21 @@ public:
 
     /*** Modifiers ***/
     template<class InputIterator>
-    void assign(InputIterator first, InputIterator last);
+    void assign(InputIterator first, InputIterator last);                   // Range assign
+
+    void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
+    void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
+
+    void resize(const size_type newSize);
+    void resize(const size_type newSize, const value_type& fillValue);
+    void reserve(const size_type reservationSize);
+    void shrink_to_fit();
 
     /*** Size and Capacity Checkers ***/
     size_type size()        const { return sz;          }
     size_type capacity()    const { return cap;         }
     // size_type max_size() const {                     }        // TODO Search for implementation
     bool empty()            const { return (sz == 0);   }
-
-    void resize(const size_type newSize);
-    void resize(const size_type newSize, const value_type& fillValue);
-    void reserve(const size_type reservationSize);
-    void shrink_to_fit();
 
 private:
     /*** Members ***/
@@ -286,7 +289,7 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
 
     if(numberOfElements > 0)
     {
-        if(numberOfElements > cap)  // Is a bigger space needed?
+        if(numberOfElements > capacity())  // Is a bigger space needed?
         {
             delete [] data; // Destroy previous data
 
@@ -301,6 +304,46 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
     }
     else
         throw(std::logic_error("Wrong iterator sequence!"));
+}
+
+template<class T>
+void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
+{
+    if(numberOfElements > 0)
+    {
+        if(numberOfElements > capacity())
+        {
+            delete [] data; // Destroy previous data
+
+            cap     = numberOfElements;
+            data    = new value_type[cap];  // Reallocate space for incoming elements
+        }
+
+        for(size_type index = 0; index < size_type(numberOfElements); ++index)
+            data[index] = fillValue;
+
+        sz = numberOfElements;  // Determine new size
+    }
+    else
+        throw(std::invalid_argument("Assignment size error!"));
+}
+
+template<class T>
+void Vector<T>::assign(std::initializer_list<T> initializerList)
+{
+    if(initializerList.size() > capacity())
+    {
+        delete [] data; // Destroy previous data
+
+        cap     = initializerList.size();
+        data    = new value_type[cap];  // Reallocate space for incoming elements
+    }
+
+    size_type index = 0;
+    for(const value_type& element : initializerList)
+        data[index++] = element;
+
+    sz = initializerList.size();
 }
 
 template<class T>

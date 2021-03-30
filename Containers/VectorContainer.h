@@ -2,7 +2,7 @@
  * @file        VectorContainer.h
  * @details     A template vector container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
- * @date        March 29, 2021    -> First release
+ * @date        March 30, 2021    -> First release
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -59,8 +59,8 @@ public:
     reference       front()         { return data[0]; }
     const_reference front() const   { return data[0]; }
 
-    reference back()                { return data[sz]; }
-    const_reference back() const    { return data[sz]; }
+    reference       back()          { return data[sz - 1]; }
+    const_reference back() const    { return data[sz - 1]; }
 
     /*** Iterators ***/
     iterator begin()                { return data;      }
@@ -69,6 +69,10 @@ public:
     const_iterator end()    const   { return data + sz; }
     const_iterator cbegin() const   { return data;      }
     const_iterator cend()   const   { return data + sz; }
+
+    /*** Modifiers ***/
+    template<class InputIterator>
+    void assign(InputIterator first, InputIterator last);
 
     /*** Size and Capacity Checkers ***/
     size_type size()        const { return sz;          }
@@ -138,11 +142,7 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
             data[index] = *first;
     }
     else
-    {
-        sz      = 0;
-        cap     = 0;
-        data    = nullptr;
-    }
+        throw(std::logic_error("Wrong iterator sequence!"));
 }
 
 template<class T>
@@ -276,6 +276,31 @@ const T& Vector<T>::at(const size_type position) const
         return data[position];
 
     throw(std::out_of_range("Index is out-of-range!"));
+}
+
+template<class T>
+template<class InputIterator>
+void Vector<T>::assign(InputIterator first, InputIterator last)
+{
+    const difference_type numberOfElements = last - first;
+
+    if(numberOfElements > 0)
+    {
+        if(numberOfElements > cap)  // Is a bigger space needed?
+        {
+            delete [] data; // Destroy previous data
+
+            cap     = numberOfElements;
+            data    = new value_type[cap];  // Reallocate space for incoming elements
+        }
+
+        for(size_type index = 0; (index < size_type(numberOfElements)) && (first != last); ++index, ++first)
+            data[index] = *first;
+
+        sz = numberOfElements;  // Determine new size
+    }
+    else
+        throw(std::logic_error("Wrong iterator sequence!"));
 }
 
 template<class T>

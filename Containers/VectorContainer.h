@@ -37,7 +37,6 @@ public:
 
     template<class InputIterator>
     Vector(InputIterator first, InputIterator last);                        // Range constructor
-
     Vector(const Vector& copyVector);                                       // Copy constructor
     Vector(Vector&& moveVector);                                            // Move constructor
     Vector(std::initializer_list<value_type> initializerList);              // Initializer list constructor
@@ -73,9 +72,10 @@ public:
     /*** Modifiers ***/
     template<class InputIterator>
     void assign(InputIterator first, InputIterator last);                   // Range assign
-
     void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
+
+    void push_back(const value_type& value);
 
     void resize(const size_type newSize);
     void resize(const size_type newSize, const value_type& fillValue);
@@ -99,7 +99,7 @@ private:
 std::size_t nextPowerOf2(std::size_t N)
 {
     if(N == 0)
-        return 0;
+        return 1;
 
     std::size_t maxValuedBit = 1;
 
@@ -344,6 +344,24 @@ void Vector<T>::assign(std::initializer_list<T> initializerList)
         data[index++] = element;
 
     sz = initializerList.size();
+}
+
+template<class T>
+void Vector<T>::push_back(const value_type& value)
+{
+    if(size() == capacity())    // Size is about to surpass the capacity
+    {
+        cap = nextPowerOf2(capacity());
+        value_type* newData = new value_type[cap];
+
+        for(size_type index = 0; index < size(); ++index)
+            newData[index] = data[index];
+
+        delete [] data;
+        data = newData;
+    }
+
+    data[sz++] = value;
 }
 
 template<class T>

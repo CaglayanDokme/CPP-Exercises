@@ -80,6 +80,8 @@ public:
 
     void pop_back();    // Remove last elements
 
+    iterator insert(iterator position, const value_type& value);    // Single element insertion
+
     void resize(const size_type newSize);
     void resize(const size_type newSize, const value_type& fillValue);
     void reserve(const size_type reservationSize);
@@ -372,6 +374,54 @@ void Vector<T>::pop_back()
 {
     if(size() > 0)
         --sz;
+}
+
+template<class T>
+T* Vector<T>::insert(iterator position, const value_type& value)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(position == end())
+    {
+        push_back(value);
+
+        return (end() - 1);     // end() changed
+    }
+
+    // Move objects after the position
+    if(size() == capacity())    // Allocation needed
+    {
+        cap = nextPowerOf2(capacity());
+        value_type* newData = new value_type[cap];
+
+        size_type newIndex = 0;
+        for(iterator it = begin(); it != position; ++it)    // Move elements before position
+            newData[newIndex++] = *it;
+
+        // Place new value
+        iterator newPosition = newData + newIndex;  // Save data position for function return
+        newData[newIndex++] = value;
+
+        for(iterator it = position; it != end(); ++it)  // Move elements after position
+            newData[newIndex++] = *it;
+
+        delete [] data; // Destroy previous data
+        data = newData; // Replace data
+
+        ++sz;   // Increase size
+        return newPosition;
+    }
+    else    // Allocation not needed
+    {
+        for(iterator it = end(); it != position; --it)  // Move elements after position
+            *it = *(it - 1);
+
+        *position = value;  // Insert element
+        ++sz;   // Increase size
+
+        return position;
+    }
 }
 
 template<class T>

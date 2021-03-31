@@ -76,6 +76,9 @@ public:
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
     void push_back(const value_type& value);
+    void push_back(value_type&& value); // TODO Not implemented yet
+
+    void pop_back();    // Remove last elements
 
     void resize(const size_type newSize);
     void resize(const size_type newSize, const value_type& fillValue);
@@ -362,6 +365,13 @@ void Vector<T>::push_back(const value_type& value)
     }
 
     data[sz++] = value;
+}
+
+template<class T>
+void Vector<T>::pop_back()
+{
+    if(size() > 0)
+        --sz;
 }
 
 template<class T>

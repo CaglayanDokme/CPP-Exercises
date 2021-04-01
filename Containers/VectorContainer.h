@@ -83,6 +83,8 @@ public:
 
     void pop_back();    // Remove last element
 
+    template <class InputIterator>
+    iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
     iterator insert(iterator position, const value_type& value);                                // Single element insertion
     iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
 
@@ -396,6 +398,18 @@ void Vector<T>::pop_back()
 {
     if(size() > 0)
         --sz;
+}
+
+template<class T>
+template <class InputIterator>
+T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
+{
+    --last;
+    for(; last != first; --last)
+    {
+        position = insert(position, *last);
+    }
+    return insert(position, *first);
 }
 
 template<class T>

@@ -94,6 +94,7 @@ public:
     iterator erase(iterator first, iterator last);  // Iterator based multiple erase
 
     void swap(Vector& swapVector);  // Swap
+    void clear() noexcept { sz = 0; }
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill

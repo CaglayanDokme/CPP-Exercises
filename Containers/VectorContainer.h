@@ -90,8 +90,10 @@ public:
     iterator insert(iterator position, value_type&& value);                                     // Move insertion
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
-    iterator erase(iterator position);  // Single element erase
-    iterator erase(iterator first, iterator last);
+    iterator erase(iterator position);              // Single element erase
+    iterator erase(iterator first, iterator last);  // Iterator based multiple erase
+
+    void swap(Vector& swapVector);  // Swap
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
@@ -620,6 +622,28 @@ T* Vector<T>::erase(iterator first, iterator last)
     }
     else
         throw(std::invalid_argument("Invalid iterator sequence!"));
+}
+
+template<class T>
+void Vector<T>::swap(Vector& swapVector)
+{
+    if(this == &swapVector) // Check self swap
+        return;
+
+    value_type* tempData;
+    size_type tempSzCap;
+
+    tempData        = data;
+    data            = swapVector.data;
+    swapVector.data = tempData;
+
+    tempSzCap       = sz;
+    sz              = swapVector.size();
+    swapVector.sz   = tempSzCap;
+
+    tempSzCap       = cap;
+    cap             = swapVector.capacity();
+    swapVector.cap  = tempSzCap;
 }
 
 template<class T>

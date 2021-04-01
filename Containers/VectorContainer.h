@@ -88,6 +88,9 @@ public:
     iterator insert(iterator position, const value_type& value);                                // Single element insertion
     iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
     iterator insert(iterator position, value_type&& value);                                     // Move insertion
+    iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
+
+    iterator erase(iterator position);  // Single element erase
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
@@ -556,6 +559,43 @@ T* Vector<T>::insert(iterator position, value_type&& value)
 
         return position;
     }
+}
+
+template<class T>
+T* Vector<T>::insert(iterator position, std::initializer_list<value_type> il)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(position == end())
+    {
+        for(const_reference element : il)
+            push_back(element);
+
+        return (end() - il.size());     // end() may be changed
+    }
+
+    return insert(position, il.begin(), il.end());
+}
+
+template<class T>
+T* Vector<T>::erase(iterator position)
+{
+    if((position < begin()) || (position >= end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(position == (end() - 1))
+    {
+        pop_back();
+
+        return position;
+    }
+
+    for(iterator it = position; it != end(); ++it)  // Shift left each element
+        *it = *(it + 1);
+
+    --sz;
+    return position;
 }
 
 template<class T>

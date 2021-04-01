@@ -55,22 +55,22 @@ public:
     const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
 
     /*** Element Access ***/
-    reference       at(const size_type position);
-    const_reference at(const size_type position) const;
+    reference       at(const size_type position);           // Random access with range check
+    const_reference at(const size_type position) const;     // Random access with range check
 
-    reference       front()         { return data[0]; }
-    const_reference front() const   { return data[0]; }
+    reference       front()         { return data[0]; }     // Access to the first element
+    const_reference front() const   { return data[0]; }     // Access to the first element
 
-    reference       back()          { return data[sz - 1]; }
-    const_reference back() const    { return data[sz - 1]; }
+    reference       back()          { return data[sz - 1]; }    // Access to the last element
+    const_reference back() const    { return data[sz - 1]; }    // Access to the last element
 
     /*** Iterators ***/
-    iterator begin()                { return data;      }
-    iterator end()                  { return data + sz; }
-    const_iterator begin()  const   { return data;      }
-    const_iterator end()    const   { return data + sz; }
-    const_iterator cbegin() const   { return data;      }
-    const_iterator cend()   const   { return data + sz; }
+    iterator begin()                { return data;      }   // Iterator starting from the first element
+    iterator end()                  { return data + sz; }   // Iterator starting from the next of the last element
+    const_iterator begin()  const   { return data;      }   // Iterator starting from the first element
+    const_iterator end()    const   { return data + sz; }   // Iterator starting from the next of the last element
+    const_iterator cbegin() const   { return data;      }   // Iterator starting from the first element
+    const_iterator cend()   const   { return data + sz; }   // Iterator starting from the next of the last element
 
     /*** Modifiers ***/
     template<class InputIterator>
@@ -78,15 +78,16 @@ public:
     void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
-    void push_back(const value_type& value);
-    void push_back(value_type&& value); // TODO Not implemented yet
+    void push_back(const value_type& value);    // Push element next to the last element
+    void push_back(value_type&& value);         // Push element next to the last element by moving
 
-    void pop_back();    // Remove last elements
+    void pop_back();    // Remove last element
 
-    iterator insert(iterator position, const value_type& value);    // Single element insertion
+    iterator insert(iterator position, const value_type& value);                                // Single element insertion
+    iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
 
-    void resize(const size_type newSize);
-    void resize(const size_type newSize, const value_type& fillValue);
+    void resize(const size_type newSize);                               // Simple resize
+    void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
     void reserve(const size_type reservationSize);
     void shrink_to_fit();
 
@@ -440,6 +441,52 @@ T* Vector<T>::insert(iterator position, const value_type& value)
 
         *position = value;  // Insert element
         ++sz;   // Increase size
+
+        return position;
+    }
+}
+
+template<class T>
+T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_type& value)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(numberOfElements == 0)
+        throw(std::invalid_argument("At least one element must be inserted!"));
+
+    if(size() + numberOfElements > capacity()) // Allocation needed
+    {
+        cap = nextPowerOf2(size() + numberOfElements);
+        value_type* newData = new value_type[cap];  // Allocate new space
+
+        size_type newIndex = 0;
+        for(iterator it = begin(); it != position; ++it)    // Move elements before position
+            newData[newIndex++] = *it;
+
+        iterator newPosition = newData + newIndex;
+        for(size_type index = 0; index < numberOfElements; ++index)        // Place new elements
+            newData[newIndex++] = value;
+
+        for(iterator it = position; it != end(); ++it)      // Move elements after position
+            newData[newIndex++] = *it;
+
+        delete [] data; // Destroy previous data
+        data = newData; // Replace data
+
+        sz += numberOfElements;        // Increase size
+
+        return newPosition;
+    }
+    else
+    {
+        for(iterator it = end() + numberOfElements - 1; it != position + numberOfElements - 1; --it)  // Move elements after position
+            *it = *(it - numberOfElements);
+
+        for(iterator it = position; it != position + numberOfElements; ++it)           // Fill the gap
+            *it = value;
+
+        sz += numberOfElements;
 
         return position;
     }

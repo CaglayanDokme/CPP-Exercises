@@ -2,7 +2,9 @@
  * @file        VectorContainer.h
  * @details     A template vector container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
- * @date        March 30, 2021    -> First release
+ * @date        March 30, 2021      -> First release
+ *              March 31, 2021      -> Single value insert(..) added.
+ *              April 1, 2021       ->
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -16,6 +18,7 @@
 #include <cstddef>              // For std::size_t, ptrdiff_t
 #include <initializer_list>     // For std::initializer_list
 #include <stdexcept>            // For exceptions
+#include <utility>              // For std::move
 
 /*** Container Class ***/
 template<class T>
@@ -367,6 +370,24 @@ void Vector<T>::push_back(const value_type& value)
     }
 
     data[sz++] = value;
+}
+
+template<class T>
+void Vector<T>::push_back(value_type&& value)
+{
+    if(size() == capacity())    // Size is about to surpass the capacity
+    {
+        cap = nextPowerOf2(capacity());
+        value_type* newData = new value_type[cap];
+
+        for(size_type index = 0; index < size(); ++index)
+            newData[index] = data[index];
+
+        delete [] data;
+        data = newData;
+    }
+
+    data[sz++] = std::move(value);
 }
 
 template<class T>

@@ -91,6 +91,7 @@ public:
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
     iterator erase(iterator position);  // Single element erase
+    iterator erase(iterator first, iterator last);
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
@@ -596,6 +597,29 @@ T* Vector<T>::erase(iterator position)
 
     --sz;
     return position;
+}
+
+template<class T>
+T* Vector<T>::erase(iterator first, iterator last)
+{
+    if((first < begin()) || (last > end()))
+        throw(std::invalid_argument("Iterators must rely inside the container!"));
+
+    const difference_type distance = last - first;
+
+    if(distance > 0)
+    {
+        const difference_type numberOfMovingElements = end() - last;
+
+        for(size_type index = 0; index < size_type(numberOfMovingElements); ++index)
+            *(first + index) = *(last + index);
+
+        sz -= size_type(distance);
+
+        return first;
+    }
+    else
+        throw(std::invalid_argument("Invalid iterator sequence!"));
 }
 
 template<class T>

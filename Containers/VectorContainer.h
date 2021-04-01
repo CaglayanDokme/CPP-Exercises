@@ -87,6 +87,7 @@ public:
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
     iterator insert(iterator position, const value_type& value);                                // Single element insertion
     iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
+    iterator insert(iterator position, value_type&& value);                                     // Move insertion
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
@@ -404,6 +405,9 @@ template<class T>
 template <class InputIterator>
 T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
 {
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
     --last;
     for(; last != first; --last)
     {
@@ -501,6 +505,54 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
             *it = value;
 
         sz += numberOfElements;
+
+        return position;
+    }
+}
+
+template<class T>
+T* Vector<T>::insert(iterator position, value_type&& value)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(position == end())
+    {
+        push_back(value);
+
+        return (end() - 1);     // end() changed
+    }
+
+    // Move objects after the position
+    if(size() == capacity())    // Allocation needed
+    {
+        cap = nextPowerOf2(capacity());
+        value_type* newData = new value_type[cap];
+
+        size_type newIndex = 0;
+        for(iterator it = begin(); it != position; ++it)    // Move elements before position
+            newData[newIndex++] = *it;
+
+        // Place new value
+        iterator newPosition = newData + newIndex;  // Save data position for function return
+        newData[newIndex++] = std::move(value);
+
+        for(iterator it = position; it != end(); ++it)  // Move elements after position
+            newData[newIndex++] = *it;
+
+        delete [] data; // Destroy previous data
+        data = newData; // Replace data
+
+        ++sz;   // Increase size
+        return newPosition;
+    }
+    else    // Allocation not needed
+    {
+        for(iterator it = end(); it != position; --it)  // Move elements after position
+            *it = *(it - 1);
+
+        *position = std::move(value);  // Insert element by moving
+        ++sz;   // Increase size
 
         return position;
     }

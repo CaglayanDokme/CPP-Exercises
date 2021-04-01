@@ -96,6 +96,9 @@ public:
     void swap(Vector& swapVector);  // Swap
     void clear() noexcept { sz = 0; }
 
+    template <class... Args>
+    iterator emplace(iterator position, Args&&... args);
+
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
     void reserve(const size_type reservationSize);
@@ -645,6 +648,48 @@ void Vector<T>::swap(Vector& swapVector)
     tempSzCap       = cap;
     cap             = swapVector.capacity();
     swapVector.cap  = tempSzCap;
+}
+
+template<class T>
+template <class... Args>
+T* Vector<T>::emplace(iterator position, Args&&... args)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    // Move objects after the position
+    if(size() == capacity())    // Allocation needed
+    {
+        cap = nextPowerOf2(capacity());
+        value_type* newData = new value_type[cap];
+
+        size_type newIndex = 0;
+        for(iterator it = begin(); it != position; ++it)    // Move elements before position
+            newData[newIndex++] = *it;
+
+        // Place new value
+        iterator newPosition = newData + newIndex;  // Save data position for function return
+        newData[newIndex++] = T(args...);
+
+        for(iterator it = position; it != end(); ++it)  // Move elements after position
+            newData[newIndex++] = *it;
+
+        delete [] data; // Destroy previous data
+        data = newData; // Replace data
+
+        ++sz;   // Increase size
+        return newPosition;
+    }
+    else    // Allocation not needed
+    {
+        for(iterator it = end(); it != position; --it)  // Move elements after position
+            *it = *(it - 1);
+
+        *position = T(args...);  // Insert element
+        ++sz;       // Increase size
+
+        return position;
+    }
 }
 
 template<class T>

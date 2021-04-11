@@ -133,6 +133,13 @@ private:
     template<class InputIterator>
     void moveRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
+    template<class InputIterator>
+    void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void copyRangeForward(iterator from, iterator to, const value_type& value);
+
+    template<class InputIterator>
+    void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
+
     void destroyRange(iterator from, iterator to);
     void destroyPointer(iterator ptr);
 };
@@ -577,13 +584,13 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
         cap = nextPowerOf2(size() + numberOfElements);
         newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        // Move the elements on the left side
-        moveRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        // Copy the elements on the left side
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
 
     // Move the elements on the right side
     if(newData != nullptr)  // If a reallocation happened
-        moveRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
+        copyRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
@@ -636,12 +643,12 @@ T* Vector<T>::insert(iterator position, const value_type& value)
         newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
         // Move the elements on the left side
-        moveRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
 
     // Move the elements on the right side
     if(newData != nullptr)  // If a reallocation happened
-        moveRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
+        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
     else
     {
         /* If there wasn't a reallocation, then move constructing the last element is enough.
@@ -692,12 +699,12 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
         newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
         // Move the elements on the left side
-        moveRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
 
     // Move the elements on the right side
     if(newData != nullptr)  // If a reallocation happened
-        moveRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
+        copyRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
@@ -740,50 +747,48 @@ T* Vector<T>::insert(iterator position, value_type&& value)
         return (end() - 1);     // end() may be changed
     }
 
-    // Move objects after the position
-    if(size() == capacity())    // Allocation needed
+    const size_type positionAsIndex = size_type(position - begin());
+    value_type* newData = nullptr;  // A reallocation may be needed
+
+    if(size() == capacity())    // Reallocation needed
     {
-        cap = nextPowerOf2(capacity());
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        // New space for incoming data
+        cap = nextPowerOf2(capacity()); // Capacity changed
+        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; begin() + index != position; ++index)      // Move elements before position
-            new(newData + index) value_type(*(data + index));               // Copy construct the new elements
-
-        // Place new value
-        iterator newPosition = newData + (position - begin());              // Save data position for function return
-        new(newData + (position - begin())) value_type(std::move(value));   // Copy construct the insertion element
-
-        for(size_type index = position - begin() + 1; begin() + index != end(); ++index)    // Move elements after position
-            new(newData + index) value_type(*(data + index));                               // Copy construct the new elements
-
-        // Destroy older ones
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
-
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
-
-        data = newData; // Replace data
-
-        ++sz;   // Increase size
-
-        return newPosition;
+        // Move the elements on the left side
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
-    else    // Allocation not needed
+
+    // Move the elements on the right side
+    if(newData != nullptr)  // If a reallocation happened
+        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
+    else
     {
-        // Shift right elements after given position
-        for(size_type index = sz; index != size_type(position - begin()); --index)
-            new(data + index) value_type(*(data + index - 1));
+        /* If there wasn't a reallocation, then move constructing the last element is enough.
+         * The remaining ones should only be copy assigned(right shifted). */
+        moveRangeForward(end() - 1, end(), end());
 
-        new(position) value_type(std::move(value)); // Construct element at position
-        ++sz;   // Increase size
-
-        return position;
+        // Copy assign the remaining ones
+        assignRangeBackward(position, end() - 1, position + 1);
     }
+
+    if(newData != nullptr)  // If a reallocation happened
+        new(newData + positionAsIndex) value_type(std::move(value));   // Copy construct new element at given position
+    else
+        *(position) = std::move(value);    // Move assign new element at given position
+
+    if(newData != nullptr)  // Change data pointer if a reallocation happened
+    {
+        destroyRange(begin(), end());   // Explicitly destroy range
+        destroyPointer(data);           // Destroy data pointer
+
+        data = newData;                 // Assign new pointer
+    }
+
+    sz++;
+
+    return (data + positionAsIndex);  // Data may be changed
 }
 
 template<class T>
@@ -1029,6 +1034,34 @@ void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator
     for( ; to != from; --to, --destination)
         new(destination) value_type(std::move(*(to - 1)));
 }
+
+template<class T>
+template<class InputIterator>
+void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator destination)
+{
+    for( ; from != to; ++from, ++destination)
+        new(destination) value_type(*from);
+}
+
+template<class T>
+void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& value)
+{
+    for( ; from != to; ++from)
+        *from = value;
+}
+
+template<class T>
+template<class InputIterator>
+void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination)
+{
+    /* Backward copying will help to prevent corruption of data
+     * when two ranges overlap each other. */
+    destination += to - from - 1;   // Start from the last
+
+    for( ; to != from; --to, --destination)
+        new(destination) value_type(*(to - 1));
+}
+
 
 template<class T>
 void Vector<T>::destroyRange(iterator from, iterator to)

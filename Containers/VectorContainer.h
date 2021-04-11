@@ -96,10 +96,13 @@ public:
     iterator erase(iterator first, iterator last);  // Iterator based multiple erase
 
     void swap(Vector& swapVector);  // Swap
-    void clear() noexcept { sz = 0; }
+    void clear() { destroyRange(begin(), end()); sz = 0; }
 
     template <class... Args>
     iterator emplace(iterator position, Args&&... args);
+
+    template <class... Args>
+    void emplace_back(Args&&... args);
 
     void resize(const size_type newSize);                               // Simple resize
     void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
@@ -306,22 +309,8 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
 template<class T>
 Vector<T>& Vector<T>::operator=(Vector&& moveVector)
 {
-    if(this == &moveVector) // Check self assignment
-        return *this;
-
-    value_type* tempData = data;
-    size_type tempSz = sz;
-    size_type tempCap = cap;
-
-    // Steal resources of move(right) vector
-    sz      = moveVector.size();
-    cap     = moveVector.cap;
-    data    = moveVector.data;
-
-    // Prevent destruction of stolen resource
-    moveVector.sz   = tempSz;
-    moveVector.cap  = tempCap;
-    moveVector.data = tempData; // Swap
+    if(this != &moveVector)     // Check self assignment
+        swap(moveVector);       // Steal resources of move(right) vector
 
     return *this;
 }
@@ -842,57 +831,116 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    // Move objects after the position
-    if(size() == capacity())    // Allocation needed
+    const size_type positionAsIndex = size_type(position - begin());
+    value_type* newData = nullptr;  // A reallocation may be needed
+
+    if(size() == capacity())    // Reallocation needed
     {
+        // New space for incoming data
+        cap = nextPowerOf2(capacity()); // Capacity changed
+        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+        // Move the elements on the left side
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+    }
+
+    // Move the elements on the right side
+    if(newData != nullptr)  // If a reallocation happened
+        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
+    else
+    {
+        /* If there wasn't a reallocation, then move constructing the last element is enough.
+         * The remaining ones should only be copy assigned(right shifted). */
+        moveRangeForward(end() - 1, end(), end());
+
+        // Copy assign the remaining ones
+        assignRangeBackward(position, end() - 1, position + 1);
+    }
+
+    if(newData != nullptr)  // If a reallocation happened
+        new(newData + positionAsIndex) value_type(args...);   // Copy construct new element at given position
+    else
+    {
+        position->~value_type();                // Destroy old element
+        new(position) value_type(args...);      // Copy assign new element at given position
+    }
+
+    if(newData != nullptr)  // Change data pointer if a reallocation happened
+    {
+        destroyRange(begin(), end());   // Explicitly destroy range
+        destroyPointer(data);           // Destroy data pointer
+
+        data = newData;                 // Assign new pointer
+    }
+
+    sz++;
+
+    return (data + positionAsIndex);  // Data may be changed
+}
+
+template<class T>
+template <class... Args>
+void Vector<T>::emplace_back(Args&&... args)
+{
+    if(size() == capacity())    // Size is about to surpass the capacity
+    {
+        /* A bigger place needed for current and incoming elements */
         cap = nextPowerOf2(capacity());
-        value_type* newData = new value_type[cap];
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        size_type newIndex = 0;
-        for(iterator it = begin(); it != position; ++it)    // Move elements before position
-            newData[newIndex++] = *it;
+        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-        // Place new value
-        iterator newPosition = newData + newIndex;  // Save data position for function return
-        newData[newIndex++] = T(args...);
+        // Destroy old resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
-        for(iterator it = position; it != end(); ++it)  // Move elements after position
-            newData[newIndex++] = *it;
-
-        delete [] data; // Destroy previous data
-        data = newData; // Replace data
-
-        ++sz;   // Increase size
-        return newPosition;
+        data = newData;
     }
-    else    // Allocation not needed
-    {
-        for(iterator it = end(); it != position; --it)  // Move elements after position
-            *it = *(it - 1);
 
-        *position = T(args...);  // Insert element
-        ++sz;       // Increase size
-
-        return position;
-    }
+    // Copy construct new element with the incoming one
+    new(data + sz++) value_type(args...);
 }
 
 template<class T>
 void Vector<T>::resize(const size_type newSize)
 {
-    if(newSize == capacity())
+    if(0 == newSize)
+        return clear();
+    else if(size() == newSize)
         return;
+    else { }
 
-    value_type* newArea = new value_type[newSize];
+    if(newSize < size())
+    {
+        destroyRange(begin() + newSize, end());
+    }
+    else
+    {
+        if(newSize < capacity())
+        {
+            for(size_type index = size(); index < newSize; ++index)
+                new(data + index) value_type;   // Default construct new elements
+        }
+        else    // Reallocation needed
+        {
+            /* A bigger place needed for current and incoming elements */
+            cap = nextPowerOf2(newSize);
+            value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(size_type index = 0; (index < newSize) && (index < size()); ++index)
-        newArea[index] = data[index];
+            copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-    delete [] data; // Destroy old resource
+            // Destroy old resource
+            destroyRange(begin(), end());
+            destroyPointer(data);
 
-    cap     = newSize;
-    sz      = (newSize < sz) ? newSize : sz;
-    data    = newArea;
+            data = newData;
+
+            for(size_type index = size(); index < newSize; ++index)
+                new(data + index) value_type;   // Default construct new elements
+        }
+    }
+
+    sz = newSize;
 }
 
 template<class T>

@@ -117,6 +117,14 @@ private:
     size_type sz    = 0;
     size_type cap   = 0;
     T* data         = nullptr;
+
+    /*** Helper Functions ***/
+    void assignRangeForward(iterator from, iterator to, iterator destination);
+    void assignRangeBackward(iterator from, iterator to, iterator destination);
+    void copyRangeForward(iterator from, iterator to, iterator destination);
+    void copyRangeBackward(iterator from, iterator to, iterator destination);
+    void destroyRange(iterator from, iterator to);
+    void destroyPointer(iterator ptr);
 };
 
 // Finds the next power of 2 which is greater than N.
@@ -600,49 +608,48 @@ T* Vector<T>::insert(iterator position, const value_type& value)
         return (end() - 1);     // end() may be changed
     }
 
-    if(size() == capacity())    // Allocation needed
+    const size_type positionAsIndex = size_type(position - begin());
+    value_type* newData = nullptr;  // A reallocation may be needed
+
+    if(size() == capacity())    // Reallocation needed
     {
-        cap = nextPowerOf2(capacity());
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        // New space for incoming data
+        cap = nextPowerOf2(capacity()); // Capacity changed
+        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; begin() + index != position; ++index)      // Move elements before position
-            new(newData + index) value_type(*(data + index));               // Copy construct the new elements
-
-        // Place new value
-        iterator newPosition = newData + (position - begin());  // Save data position for function return
-        new(newData + (position - begin())) value_type(value);  // Copy construct the insertion element
-
-        for(size_type index = position - begin() + 1; begin() + index != end(); ++index)    // Move elements after position
-            new(newData + index) value_type(*(data + index));                               // Copy construct the new elements
-
-        // Destroy older ones
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
-
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
-
-        data = newData; // Replace data
-
-        ++sz;   // Increase size
-
-        return newPosition;
+        // Move the elements on the left side
+        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
-    else    // Allocation not needed
+
+    // Move the elements on the right side
+    if(newData != nullptr)  // If a reallocation happened
+        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
+    else
     {
-        // Shift right elements after given position
-        for(size_type index = sz; index != position - begin(); --index)
-            new(data + index) value_type(*(data + index - 1));
+        /* If there wasn't a reallocation, then copy constructing the last element is enough.
+         * The remaining ones should only be copy assigned(right shifted). */
+        copyRangeForward(end() - 1, end(), end());
 
-        new(position) value_type(value); // Construct element at position
-        ++sz;   // Increase size
-
-        return position;
+        // Copy assign the remaining ones
+        assignRangeBackward(position, end() - 1, position + 1);
     }
+
+    if(newData != nullptr)  // If a reallocation happened
+        new(newData + positionAsIndex) value_type(value);   // Copy construct new element at given position
+    else
+        *(position) = value;
+
+    if(newData != nullptr)  // Change data pointer if a reallocation happened
+    {
+        destroyRange(begin(), end());   // Explicitly destroy range
+        destroyPointer(data);           // Destroy data pointer
+
+        data = newData;                 // Assign new pointer
+    }
+
+    sz++;
+
+    return (data + positionAsIndex);  // Data may be changed
 }
 
 template<class T>
@@ -942,6 +949,72 @@ void Vector<T>::shrink_to_fit()
 
     cap     = sz;
     data    = newArea;
+}
+
+template<class T>
+void Vector<T>::assignRangeForward(iterator from, iterator to, iterator destination)
+{
+    if((nullptr == from) || (nullptr == to) || (nullptr == destination) || (from >= to))
+        throw std::logic_error("Vector Container internal error!");
+
+    for( ; from != to; ++from, ++destination)
+        *destination = *from;
+}
+
+template<class T>
+void Vector<T>::assignRangeBackward(iterator from, iterator to, iterator destination)
+{
+    if((nullptr == from) || (nullptr == to) || (nullptr == destination) || (from >= to))
+        throw std::logic_error("Vector Container internal error!");
+
+    /* Backward assigning will help to prevent corruption of data
+     * when two ranges overlap each other. */
+    destination += to - from - 1;   // Start from the last
+
+    for( ; to != from; --to, --destination)
+        *destination = *(to - 1);   // Copy assign element
+}
+
+template<class T>
+void Vector<T>::copyRangeForward(iterator from, iterator to, iterator destination)
+{
+    if((nullptr == from) || (nullptr == to) || (nullptr == destination) || (from >= to))
+        throw std::logic_error("Vector Container internal error!");
+
+    for( ; from != to; ++from, ++destination)
+        new(destination) value_type(*from);
+}
+
+template<class T>
+void Vector<T>::copyRangeBackward(iterator from, iterator to, iterator destination)
+{
+    if((nullptr == from) || (nullptr == to) || (nullptr == destination) || (from >= to))
+        throw std::logic_error("Vector Container internal error!");
+
+    /* Backward copying will help to prevent corruption of data
+     * when two ranges overlap each other. */
+    destination += to - from - 1;   // Start from the last
+
+    for( ; to != from; --to, --destination)
+        new(destination) value_type(*(to - 1));
+}
+
+template<class T>
+void Vector<T>::destroyRange(iterator from, iterator to)
+{
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for( ; from != to; ++from)
+        from->~value_type();    // Explicitly call the destructor
+}
+
+template<class T>
+void Vector<T>::destroyPointer(iterator ptr)
+{
+    /* The allocated space will not be used anymore.
+     * We shall release the resource for further usage */
+    ::operator delete(static_cast<void*>(ptr));
 }
 
 template<class T>

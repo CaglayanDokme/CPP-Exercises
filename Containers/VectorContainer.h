@@ -19,6 +19,8 @@
 #include <initializer_list>     // For std::initializer_list
 #include <stdexcept>            // For exceptions
 #include <utility>              // For std::move
+#include <new>                  // For ::operator new
+#include <ostream>              // For std::cout
 
 /*** Container Class ***/
 template<class T>
@@ -140,15 +142,30 @@ Vector<T>::Vector() : sz(0), cap(0), data(nullptr)
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements)
-: sz(numberOfElements), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
-{ /* Empty constructor */ }
+: sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
+{
+    // Allocate space for incoming elements
+    // Construct will take place at each element insertion
+    if(cap > 0)
+        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+    // Construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index)
+        new(data + index) value_type;
+}
 
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
-: sz(numberOfElements), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
+: sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
-    for(reference element : *this)
-        element = fillValue;
+    // Allocate space for incoming elements
+    // Construct will take place at each element insertion
+    if(cap > 0)
+        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+    // Construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index)
+        new(data + index) value_type(fillValue);
 }
 
 template<class T>
@@ -161,10 +178,13 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
     {
         sz      = numberOfElements;
         cap     = nextPowerOf2(sz);
-        data    = new value_type[cap];
+
+        // Allocate space for incoming elements
+        // Construct will take place at each element insertion
+        data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
         for(size_type index = 0; (index < cap) && (first != last); ++index, ++first)
-            data[index] = *first;
+            new(data + index) value_type(*first);
     }
     else
         throw(std::logic_error("Wrong iterator sequence!"));
@@ -172,13 +192,19 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
 
 template<class T>
 Vector<T>::Vector(const Vector& copyVector)
-    : sz(copyVector.size()), cap(copyVector.capacity()), data((cap != 0) ? new value_type[cap] : nullptr)
+: sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr)
 {
-    const_iterator sourceIt = copyVector.cbegin();
-    iterator destIt = begin();
+    // Allocate space for incoming elements
+    // Construct will take place at each element insertion
+    if(cap > 0)
+        data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
-        *destIt = *sourceIt;
+    const_iterator sourceIt = copyVector.cbegin();
+
+    // Copy construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index, ++sourceIt)
+        new(data + index) value_type(*sourceIt);
+
 }
 
 template<class T>
@@ -192,23 +218,35 @@ Vector<T>::Vector(Vector&& moveVector)
 
 template<class T>
 Vector<T>::Vector(std::initializer_list<value_type> initializerList)
-: sz(initializerList.size()), cap(nextPowerOf2(sz)), data((cap != 0) ? new value_type[cap] : nullptr)
+: sz(initializerList.size()), cap(nextPowerOf2(sz)), data(nullptr)
 {
-    iterator destIt = begin();
+    // Allocate space for incoming elements
+    // Construct will take place at each element insertion
+    if(cap > 0)
+        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(const value_type& element : initializerList)
-    {
-        *destIt = element;
-        ++destIt;
-    }
+    const_iterator sourceIt = initializerList.begin();
+
+    // Copy construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index, ++sourceIt)
+        new(data + index) value_type(*sourceIt);
 }
 
 template<class T>
 Vector<T>::~Vector()
 {
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for(size_type index = 0; index < sz; ++index)
+        (data + index)->~value_type();
+
+    /* The allocated space will not be used anymore.
+     * We shall release the resource for further usage */
+    ::operator delete(static_cast<void*>(data));
+
     sz  = 0;
     cap = 0;
-    delete [] data;
 }
 
 template<class T>
@@ -218,21 +256,29 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
         return *this;
 
     // Destroy resource of the left vector
-    sz  = 0;
-    cap = 0;
-    delete [] data;
+
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for(size_type index = 0; index < sz; ++index)
+        (data + index)->~value_type();
+
+    /* The allocated space will not be used anymore.
+     * We shall release the resource for further usage */
+    ::operator delete(static_cast<void*>(data));
 
     // Allocate space for incoming elements
     sz      = copyVector.size();
     cap     = copyVector.capacity();
-    data    = (cap != 0) ? new value_type[cap] : nullptr;
 
-    // Copy elements
+    if(cap > 0)
+        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+    // Copy construct the elements at predetermined locations
     const_iterator sourceIt = copyVector.cbegin();
-    iterator destIt = begin();
 
-    for(;sourceIt != copyVector.cend(); ++sourceIt, ++destIt)
-        *destIt = *sourceIt;
+    for(size_type index = 0; index < sz; ++index, ++sourceIt)
+        new(data + index) value_type(*sourceIt);
 
     return *this;
 }
@@ -244,9 +290,15 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
         return *this;
 
     // Destroy resource of the left vector
-    sz = 0;
-    cap = 0;
-    delete [] data;
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for(size_type index = 0; index < sz; ++index)
+        (data + index)->~value_type();
+
+    /* The allocated space will not be used anymore.
+     * We shall release the resource for further usage */
+    ::operator delete(static_cast<void*>(data));
 
     // Steal resources of move(right) vector
     sz      = moveVector.size();
@@ -265,22 +317,28 @@ template<class T>
 Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
 {
     // Destroy resource of the left vector
-    sz  = 0;
-    cap = 0;
-    delete [] data;
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for(size_type index = 0; index < sz; ++index)
+        (data + index)->~value_type();
+
+    /* The allocated space will not be used anymore.
+     * We shall release the resource for further usage */
+    ::operator delete(static_cast<void*>(data));
 
     // Adjust new resource
     sz      = initializerList.size();
     cap     = nextPowerOf2(sz);
-    data    = (cap != 0) ? new value_type[cap] : nullptr;
 
-    iterator destIt = begin();
+    if(cap > 0)
+        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(const value_type& element : initializerList)
-    {
-        *destIt = element;
-        ++destIt;
-    }
+    const_iterator sourceIt = initializerList.begin();
+
+    // Copy construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index, ++sourceIt)
+        new(data + index) value_type(*sourceIt);
 
     return *this;
 }
@@ -310,19 +368,32 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
     const difference_type numberOfElements = last - first;
 
     if(numberOfElements > 0)
-    {
-        if(numberOfElements > capacity())  // Is a bigger space needed?
-        {
-            delete [] data; // Destroy previous data
-
-            cap     = numberOfElements;
-            data    = new value_type[cap];  // Reallocate space for incoming elements
-        }
-
-        for(size_type index = 0; (index < size_type(numberOfElements)) && (first != last); ++index, ++first)
-            data[index] = *first;
+    {        
+        // Destroy the elements of the vector
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
 
         sz = numberOfElements;  // Determine new size
+
+        if(numberOfElements > capacity())  // Is a bigger space needed?
+        {
+            /* The allocated space will not be used anymore.
+             * We shall release the resource for further usage */
+            ::operator delete(static_cast<void*>(data));
+
+            cap = nextPowerOf2(numberOfElements);
+
+            // Allocate new resource
+            if(cap > 0)
+                data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        }
+
+        // Copy construct the elements at predetermined locations
+        for(size_type index = 0; (index < cap) && (first != last); ++index, ++first)
+            new(data + index) value_type(*first);
     }
     else
         throw(std::logic_error("Wrong iterator sequence!"));
@@ -333,18 +404,30 @@ void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 {
     if(numberOfElements > 0)
     {
-        if(numberOfElements > capacity())
-        {
-            delete [] data; // Destroy previous data
+        // Destroy the elements of the vector
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
 
-            cap     = numberOfElements;
-            data    = new value_type[cap];  // Reallocate space for incoming elements
+        sz = numberOfElements;  // Determine new size
+
+        if(numberOfElements > capacity())  // Is a bigger space needed?
+        {
+            /* The allocated space will not be used anymore.
+             * We shall release the resource for further usage */
+            ::operator delete(static_cast<void*>(data));
+
+            cap = nextPowerOf2(numberOfElements);
+
+            // Allocate new resource
+            if(cap > 0)
+                data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
         }
 
         for(size_type index = 0; index < size_type(numberOfElements); ++index)
-            data[index] = fillValue;
-
-        sz = numberOfElements;  // Determine new size
+            new(data + index) value_type(fillValue);
     }
     else
         throw(std::invalid_argument("Assignment size error!"));
@@ -353,19 +436,33 @@ void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 template<class T>
 void Vector<T>::assign(std::initializer_list<T> initializerList)
 {
-    if(initializerList.size() > capacity())
-    {
-        delete [] data; // Destroy previous data
+    // Destroy the elements of the vector
+    /* The operator delete[] wouldn't work appropriately as we
+     * used the placement new operator and constructed each element
+     * at the time of the insertion*/
+    for(size_type index = 0; index < sz; ++index)
+        (data + index)->~value_type();
 
-        cap     = initializerList.size();
-        data    = new value_type[cap];  // Reallocate space for incoming elements
+    sz = initializerList.size();  // Determine new size
+
+    if(initializerList.size() > capacity())  // Is a bigger space needed?
+    {
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
+        cap = nextPowerOf2(initializerList.size());
+
+        // Allocate new resource
+        if(cap > 0)
+            data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
     }
 
-    size_type index = 0;
-    for(const value_type& element : initializerList)
-        data[index++] = element;
+    const_iterator sourceIt = initializerList.begin();
 
-    sz = initializerList.size();
+    // Copy construct the elements at predetermined locations
+    for(size_type index = 0; index < sz; ++index, ++sourceIt)
+        new(data + index) value_type(*sourceIt);
 }
 
 template<class T>
@@ -373,17 +470,29 @@ void Vector<T>::push_back(const value_type& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
+        /* A bigger place needed for current and incoming elements */
         cap = nextPowerOf2(capacity());
-        value_type* newData = new value_type[cap];
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
         for(size_type index = 0; index < size(); ++index)
-            newData[index] = data[index];
+            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
 
-        delete [] data;
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
+
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
         data = newData;
     }
 
-    data[sz++] = value;
+    // Copy construct new element with the incoming
+    new(data + sz++) value_type(value);
 }
 
 template<class T>
@@ -391,24 +500,39 @@ void Vector<T>::push_back(value_type&& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
+        /* A bigger place needed for current and incoming elements */
         cap = nextPowerOf2(capacity());
-        value_type* newData = new value_type[cap];
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
         for(size_type index = 0; index < size(); ++index)
-            newData[index] = data[index];
+            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
 
-        delete [] data;
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
+
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
         data = newData;
     }
 
-    data[sz++] = std::move(value);
+    // Move construct new element with the incoming
+    new(data + sz++) value_type(std::move(value));
 }
 
 template<class T>
 void Vector<T>::pop_back()
 {
     if(size() > 0)
+    {
         --sz;
+        (data + sz)->~value_type(); // Destroy popped element
+    }
 }
 
 template<class T>
@@ -418,12 +542,49 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    --last;
-    for(; last != first; --last)
+    difference_type numberOfElements    = last - first;
+    difference_type positionAsIndex     = position - begin();
+
+    if(numberOfElements <= 0)
+        throw(std::logic_error("Wrong iterator sequence!"));
+
+    /* If there will be reallocations for multiple times,
+     * we better reallocate for the final size in a single operation
+     * to enhance optimization of insertion. */
+    if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
-        position = insert(position, *last);
+        /* A bigger place needed for current and incoming elements */
+        cap = nextPowerOf2(size() + numberOfElements);
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+        for(size_type index = 0; index < size(); ++index)
+            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
+
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
+
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
+        data = newData;
     }
-    return insert(position, *first);
+
+    // Shift right elements after given position
+    for(size_type index = sz + numberOfElements - 1; index != size_type(positionAsIndex + numberOfElements - 1); --index)
+        new(data + index) value_type(*(data + index - numberOfElements));
+
+    // Insert incoming elements
+    for(size_type index = 0; index < size_type(numberOfElements); ++index)
+        new(data + positionAsIndex + index) value_type(*(first + index));
+
+    sz += numberOfElements; // Adjust size
+
+    return position;
 }
 
 template<class T>
@@ -436,38 +597,48 @@ T* Vector<T>::insert(iterator position, const value_type& value)
     {
         push_back(value);
 
-        return (end() - 1);     // end() changed
+        return (end() - 1);     // end() may be changed
     }
 
-    // Move objects after the position
     if(size() == capacity())    // Allocation needed
     {
         cap = nextPowerOf2(capacity());
-        value_type* newData = new value_type[cap];
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        size_type newIndex = 0;
-        for(iterator it = begin(); it != position; ++it)    // Move elements before position
-            newData[newIndex++] = *it;
+        for(size_type index = 0; begin() + index != position; ++index)      // Move elements before position
+            new(newData + index) value_type(*(data + index));               // Copy construct the new elements
 
         // Place new value
-        iterator newPosition = newData + newIndex;  // Save data position for function return
-        newData[newIndex++] = value;
+        iterator newPosition = newData + (position - begin());  // Save data position for function return
+        new(newData + (position - begin())) value_type(value);  // Copy construct the insertion element
 
-        for(iterator it = position; it != end(); ++it)  // Move elements after position
-            newData[newIndex++] = *it;
+        for(size_type index = position - begin() + 1; begin() + index != end(); ++index)    // Move elements after position
+            new(newData + index) value_type(*(data + index));                               // Copy construct the new elements
 
-        delete [] data; // Destroy previous data
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
+
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
         data = newData; // Replace data
 
         ++sz;   // Increase size
+
         return newPosition;
     }
     else    // Allocation not needed
     {
-        for(iterator it = end(); it != position; --it)  // Move elements after position
-            *it = *(it - 1);
+        // Shift right elements after given position
+        for(size_type index = sz; index != position - begin(); --index)
+            new(data + index) value_type(*(data + index - 1));
 
-        *position = value;  // Insert element
+        new(position) value_type(value); // Construct element at position
         ++sz;   // Increase size
 
         return position;
@@ -483,41 +654,45 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
     if(numberOfElements == 0)
         throw(std::invalid_argument("At least one element must be inserted!"));
 
-    if(size() + numberOfElements > capacity()) // Allocation needed
+    difference_type positionAsIndex     = position - begin();
+
+    /* If there will be reallocations for multiple times,
+     * we better reallocate for the final size in a single operation
+     * to enhance optimization of insertion. */
+    if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
+        /* A bigger place needed for current and incoming elements */
         cap = nextPowerOf2(size() + numberOfElements);
-        value_type* newData = new value_type[cap];  // Allocate new space
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        size_type newIndex = 0;
-        for(iterator it = begin(); it != position; ++it)    // Move elements before position
-            newData[newIndex++] = *it;
+        for(size_type index = 0; index < size(); ++index)
+            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
 
-        iterator newPosition = newData + newIndex;
-        for(size_type index = 0; index < numberOfElements; ++index)        // Place new elements
-            newData[newIndex++] = value;
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
 
-        for(iterator it = position; it != end(); ++it)      // Move elements after position
-            newData[newIndex++] = *it;
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
 
-        delete [] data; // Destroy previous data
-        data = newData; // Replace data
-
-        sz += numberOfElements;        // Increase size
-
-        return newPosition;
+        data = newData;
     }
-    else
-    {
-        for(iterator it = end() + numberOfElements - 1; it != position + numberOfElements - 1; --it)  // Move elements after position
-            *it = *(it - numberOfElements);
 
-        for(iterator it = position; it != position + numberOfElements; ++it)           // Fill the gap
-            *it = value;
+    // Shift right elements after given position
+    for(size_type index = sz + numberOfElements - 1; index != size_type(positionAsIndex) + size_type(numberOfElements) - 1; --index)
+        new(data + index) value_type(*(data + index - numberOfElements));
 
-        sz += numberOfElements;
+    // Insert incoming elements
+    for(size_type index = 0; index < size_type(numberOfElements); ++index)
+        new(data + positionAsIndex + index) value_type(value);
 
-        return position;
-    }
+    sz += numberOfElements; // Adjust size
+
+    return position;
 }
 
 template<class T>
@@ -530,38 +705,49 @@ T* Vector<T>::insert(iterator position, value_type&& value)
     {
         push_back(value);
 
-        return (end() - 1);     // end() changed
+        return (end() - 1);     // end() may be changed
     }
 
     // Move objects after the position
     if(size() == capacity())    // Allocation needed
     {
         cap = nextPowerOf2(capacity());
-        value_type* newData = new value_type[cap];
+        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        size_type newIndex = 0;
-        for(iterator it = begin(); it != position; ++it)    // Move elements before position
-            newData[newIndex++] = *it;
+        for(size_type index = 0; begin() + index != position; ++index)      // Move elements before position
+            new(newData + index) value_type(*(data + index));               // Copy construct the new elements
 
         // Place new value
-        iterator newPosition = newData + newIndex;  // Save data position for function return
-        newData[newIndex++] = std::move(value);
+        iterator newPosition = newData + (position - begin());              // Save data position for function return
+        new(newData + (position - begin())) value_type(std::move(value));   // Copy construct the insertion element
 
-        for(iterator it = position; it != end(); ++it)  // Move elements after position
-            newData[newIndex++] = *it;
+        for(size_type index = position - begin() + 1; begin() + index != end(); ++index)    // Move elements after position
+            new(newData + index) value_type(*(data + index));                               // Copy construct the new elements
 
-        delete [] data; // Destroy previous data
+        // Destroy older ones
+        /* The operator delete[] wouldn't work appropriately as we
+         * used the placement new operator and constructed each element
+         * at the time of the insertion*/
+        for(size_type index = 0; index < sz; ++index)
+            (data + index)->~value_type();
+
+        /* The allocated space will not be used anymore.
+         * We shall release the resource for further usage */
+        ::operator delete(static_cast<void*>(data));
+
         data = newData; // Replace data
 
         ++sz;   // Increase size
+
         return newPosition;
     }
     else    // Allocation not needed
     {
-        for(iterator it = end(); it != position; --it)  // Move elements after position
-            *it = *(it - 1);
+        // Shift right elements after given position
+        for(size_type index = sz; index != size_type(position - begin()); --index)
+            new(data + index) value_type(*(data + index - 1));
 
-        *position = std::move(value);  // Insert element by moving
+        new(position) value_type(std::move(value)); // Construct element at position
         ++sz;   // Increase size
 
         return position;
@@ -569,20 +755,12 @@ T* Vector<T>::insert(iterator position, value_type&& value)
 }
 
 template<class T>
-T* Vector<T>::insert(iterator position, std::initializer_list<value_type> il)
+T* Vector<T>::insert(iterator position, std::initializer_list<value_type> initializerList)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    if(position == end())
-    {
-        for(const_reference element : il)
-            push_back(element);
-
-        return (end() - il.size());     // end() may be changed
-    }
-
-    return insert(position, il.begin(), il.end());
+    return insert(position, initializerList.begin(), initializerList.end());
 }
 
 template<class T>
@@ -764,6 +942,15 @@ void Vector<T>::shrink_to_fit()
 
     cap     = sz;
     data    = newArea;
+}
+
+template<class T>
+std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
+{
+    for(const T& element : vector)
+        stream << element << " ";
+
+    return stream;
 }
 
 #endif

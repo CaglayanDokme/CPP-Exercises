@@ -946,23 +946,43 @@ void Vector<T>::resize(const size_type newSize)
 template<class T>
 void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
 {
-    if(newSize == capacity())
+    if(0 == newSize)
+        return clear();
+    else if(size() == newSize)
         return;
+    else { }
 
-    value_type* newArea = new value_type[newSize];
+    if(newSize < size())
+    {
+        destroyRange(begin() + newSize, end());
+    }
+    else
+    {
+        if(newSize < capacity())
+        {
+            for(size_type index = size(); index < newSize; ++index)
+                new(data + index) value_type(fillValue);   // Copy construct new elements
+        }
+        else    // Reallocation needed
+        {
+            /* A bigger place needed for current and incoming elements */
+            cap = nextPowerOf2(newSize);
+            value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    size_type index = 0;
-    for(index = 0; (index < newSize) && (index < size()); ++index)
-        newArea[index] = data[index];
+            copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-    for( ; index < newSize; ++index)
-        newArea[index] = fillValue;
+            // Destroy old resource
+            destroyRange(begin(), end());
+            destroyPointer(data);
 
-    delete [] data; // Destroy old resource
+            data = newData;
 
-    cap     = newSize;
-    sz      = (newSize < sz) ? newSize : sz;
-    data    = newArea;
+            for(size_type index = size(); index < newSize; ++index)
+                new(data + index) value_type(fillValue);   // Copy construct new elements
+        }
+    }
+
+    sz = newSize;
 }
 
 template<class T>
@@ -971,32 +991,34 @@ void Vector<T>::reserve(const size_type reservationSize)
     if(reservationSize <= capacity())
         return;
 
-    value_type* newArea = new value_type[reservationSize];
+    /* A bigger place needed for current and incoming elements */
+    cap = reservationSize;
+    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(size_type index = 0; index < size(); ++index)
-        newArea[index] = data[index];
+    copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-    delete [] data; // Destroy old resource
+    // Destroy old resource
+    destroyRange(begin(), end());
+    destroyPointer(data);
 
-    cap     = reservationSize;
-    data    = newArea;
+    data = newData;
 }
 
 template<class T>
 void Vector<T>::shrink_to_fit()
 {
-    if((sz == 0) || (sz == cap))
+    if(size() == capacity())
         return;
 
-    value_type* newArea = new value_type[sz];
+    cap = size();
+    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-    for(size_type index = 0; index < size(); ++index)
-        newArea[index] = data[index];
+    copyRangeForward(begin(), end(), newData);
 
-    delete [] data; // Destroy old resource
+    destroyRange(begin(), end());
+    destroyPointer(data);
 
-    cap     = sz;
-    data    = newArea;
+    data = newData;
 }
 
 template<class T>

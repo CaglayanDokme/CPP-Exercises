@@ -121,12 +121,14 @@ private:
     /*** Helper Functions ***/
     template<class InputIterator>
     void assignRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void assignRangeForward(iterator from, iterator to, const value_type& value);
 
     template<class InputIterator>
     void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
     void moveRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void moveRangeForward(iterator from, iterator to, const value_type& value);
 
     template<class InputIterator>
     void moveRangeBackward(InputIterator from, InputIterator to, iterator destination);
@@ -584,7 +586,7 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
         moveRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
     else
     {
-        /* If there wasn't a reallocation, then copy constructing the elements
+        /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
          * ones should only be copy assigned(right shifted). */
         moveRangeForward(end() - numberOfElements, end(), end());
@@ -642,7 +644,7 @@ T* Vector<T>::insert(iterator position, const value_type& value)
         moveRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
     else
     {
-        /* If there wasn't a reallocation, then copy constructing the last element is enough.
+        /* If there wasn't a reallocation, then move constructing the last element is enough.
          * The remaining ones should only be copy assigned(right shifted). */
         moveRangeForward(end() - 1, end(), end());
 
@@ -677,7 +679,8 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
     if(numberOfElements == 0)
         throw(std::invalid_argument("At least one element must be inserted!"));
 
-    difference_type positionAsIndex     = position - begin();
+    difference_type positionAsIndex = position - begin();
+    value_type* newData = nullptr;  // A reallocation may be needed
 
     /* If there will be reallocations for multiple times,
      * we better reallocate for the final size in a single operation
@@ -686,36 +689,42 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
     {
         /* A bigger place needed for current and incoming elements */
         cap = nextPowerOf2(size() + numberOfElements);
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; index < size(); ++index)
-            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
-
-        // Destroy older ones
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
-
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
-
-        data = newData;
+        // Move the elements on the left side
+        moveRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
     }
 
-    // Shift right elements after given position
-    for(size_type index = sz + numberOfElements - 1; index != size_type(positionAsIndex) + size_type(numberOfElements) - 1; --index)
-        new(data + index) value_type(*(data + index - numberOfElements));
+    // Move the elements on the right side
+    if(newData != nullptr)  // If a reallocation happened
+        moveRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
+    else
+    {
+        /* If there wasn't a reallocation, then move constructing the elements
+         * that will locate after the current size is enough. The remaining
+         * ones should only be copy assigned(right shifted). */
+        moveRangeForward(end() - numberOfElements, end(), end());
 
-    // Insert incoming elements
-    for(size_type index = 0; index < size_type(numberOfElements); ++index)
-        new(data + positionAsIndex + index) value_type(value);
+        // Copy assign the remaining ones
+        assignRangeBackward(position, end() - numberOfElements, position + numberOfElements);
+    }
 
-    sz += numberOfElements; // Adjust size
+    if(newData != nullptr)  // If a reallocation happened
+        moveRangeForward(newData + positionAsIndex, newData + positionAsIndex + numberOfElements, value);       // Copy construct new elements at given position
+    else
+        assignRangeForward(position, position + numberOfElements, value);     // Copy assign new elements at given position
 
-    return position;
+    if(newData != nullptr)  // Change data pointer if a reallocation happened
+    {
+        destroyRange(begin(), end());   // Explicitly destroy range
+        destroyPointer(data);           // Destroy data pointer
+
+        data = newData;                 // Assign new pointer
+    }
+
+    sz += numberOfElements;
+
+    return (data + positionAsIndex);
 }
 
 template<class T>
@@ -976,6 +985,13 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
 }
 
 template<class T>
+void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value)
+{
+    for( ; from != to; ++from)
+        *from = value;
+}
+
+template<class T>
 template<class InputIterator>
 void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
@@ -993,6 +1009,13 @@ void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator 
 {
     for( ; from != to; ++from, ++destination)
         new(destination) value_type(std::move(*from));
+}
+
+template<class T>
+void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& value)
+{
+    for( ; from != to; ++from)
+        *from = std::move(value);
 }
 
 template<class T>

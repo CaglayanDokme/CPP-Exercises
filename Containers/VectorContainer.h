@@ -490,24 +490,16 @@ void Vector<T>::push_back(const value_type& value)
         cap = nextPowerOf2(capacity());
         value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; index < size(); ++index)
-            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
+        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-        // Destroy older ones
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
-
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
+        // Destroy old resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         data = newData;
     }
 
-    // Copy construct new element with the incoming
+    // Copy construct new element with the incoming one
     new(data + sz++) value_type(value);
 }
 
@@ -520,19 +512,11 @@ void Vector<T>::push_back(value_type&& value)
         cap = nextPowerOf2(capacity());
         value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; index < size(); ++index)
-            new(newData + index) value_type(*(data + index));   // Copy construct the new elements
+        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
 
-        // Destroy older ones
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
-
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
+        // Destroy old resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         data = newData;
     }
@@ -804,10 +788,10 @@ T* Vector<T>::erase(iterator position)
         return position;
     }
 
-    for(iterator it = position; it != end(); ++it)  // Shift left each element
-        *it = *(it + 1);
+    assignRangeForward(position + 1, end(), position);  // Shift left the elements on the right
+    destroyRange(end() - 1, end());                     // Destroy outsider elements
+    --sz;   // Decrement size
 
-    --sz;
     return position;
 }
 
@@ -817,21 +801,16 @@ T* Vector<T>::erase(iterator first, iterator last)
     if((first < begin()) || (last > end()))
         throw(std::invalid_argument("Iterators must rely inside the container!"));
 
+    if(last == first)
+        throw(std::invalid_argument("Invalid iterator sequence!"));
+
     const difference_type distance = last - first;
 
-    if(distance > 0)
-    {
-        const difference_type numberOfMovingElements = end() - last;
+    assignRangeForward(first + distance, end(), first); // Shift left the elements on the right
+    destroyRange(end() - distance, end());
+    sz -= distance;
 
-        for(size_type index = 0; index < size_type(numberOfMovingElements); ++index)
-            *(first + index) = *(last + index);
-
-        sz -= size_type(distance);
-
-        return first;
-    }
-    else
-        throw(std::invalid_argument("Invalid iterator sequence!"));
+    return first;
 }
 
 template<class T>

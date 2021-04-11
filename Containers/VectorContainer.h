@@ -260,15 +260,8 @@ Vector<T>::Vector(std::initializer_list<value_type> initializerList)
 template<class T>
 Vector<T>::~Vector()
 {
-    /* The operator delete[] wouldn't work appropriately as we
-     * used the placement new operator and constructed each element
-     * at the time of the insertion*/
-    for(size_type index = 0; index < sz; ++index)
-        (data + index)->~value_type();
-
-    /* The allocated space will not be used anymore.
-     * We shall release the resource for further usage */
-    ::operator delete(static_cast<void*>(data));
+    destroyRange(begin(), end());
+    destroyPointer(data);
 
     sz  = 0;
     cap = 0;
@@ -280,30 +273,32 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
     if(this == &copyVector) // Check self assignment
         return *this;
 
-    // Destroy resource of the left vector
+    if(copyVector.size() > capacity())  // Reallocation needed?
+    {
+        destroyRange(begin(), end());   // Destroy elements of the left vector
+        destroyPointer(data);
 
-    /* The operator delete[] wouldn't work appropriately as we
-     * used the placement new operator and constructed each element
-     * at the time of the insertion*/
-    for(size_type index = 0; index < sz; ++index)
-        (data + index)->~value_type();
+        sz      = 0;
+        cap     = nextPowerOf2(copyVector.size());  // Determine new capacity
+        data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));   // Allocate resource
+    }
 
-    /* The allocated space will not be used anymore.
-     * We shall release the resource for further usage */
-    ::operator delete(static_cast<void*>(data));
+    /* Currently used posisitions inside the container are assignable.
+     * The rest of them needs construction by copying. */
+    if(0 == sz)
+        copyRangeForward(copyVector.begin(), copyVector.begin() + copyVector.size(), begin());
+    else if(copyVector.size() < sz)
+    {
+        assignRangeForward(copyVector.begin(), copyVector.begin() + copyVector.size(), begin());
+        destroyRange(begin() + copyVector.size(), end());
+    }
+    else
+    {
+        assignRangeForward(copyVector.begin(), copyVector.begin() + sz, begin());
+        copyRangeForward(copyVector.begin() + sz, copyVector.end(), begin() + sz);
+    }
 
-    // Allocate space for incoming elements
-    sz      = copyVector.size();
-    cap     = copyVector.capacity();
-
-    if(cap > 0)
-        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-    // Copy construct the elements at predetermined locations
-    const_iterator sourceIt = copyVector.cbegin();
-
-    for(size_type index = 0; index < sz; ++index, ++sourceIt)
-        new(data + index) value_type(*sourceIt);
+    sz = copyVector.size(); // Adjust size
 
     return *this;
 }
@@ -314,16 +309,9 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
     if(this == &moveVector) // Check self assignment
         return *this;
 
-    // Destroy resource of the left vector
-    /* The operator delete[] wouldn't work appropriately as we
-     * used the placement new operator and constructed each element
-     * at the time of the insertion*/
-    for(size_type index = 0; index < sz; ++index)
-        (data + index)->~value_type();
-
-    /* The allocated space will not be used anymore.
-     * We shall release the resource for further usage */
-    ::operator delete(static_cast<void*>(data));
+    value_type* tempData = data;
+    size_type tempSz = sz;
+    size_type tempCap = cap;
 
     // Steal resources of move(right) vector
     sz      = moveVector.size();
@@ -331,9 +319,9 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
     data    = moveVector.data;
 
     // Prevent destruction of stolen resource
-    moveVector.sz   = 0;
-    moveVector.cap  = 0;
-    moveVector.data = nullptr;
+    moveVector.sz   = tempSz;
+    moveVector.cap  = tempCap;
+    moveVector.data = tempData; // Swap
 
     return *this;
 }
@@ -341,29 +329,32 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector)
 template<class T>
 Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
 {
-    // Destroy resource of the left vector
-    /* The operator delete[] wouldn't work appropriately as we
-     * used the placement new operator and constructed each element
-     * at the time of the insertion*/
-    for(size_type index = 0; index < sz; ++index)
-        (data + index)->~value_type();
+    if(initializerList.size() > capacity()) // Reallocation needed?
+    {
+        destroyRange(begin(), end());   // Destroy elements of the left vector
+        destroyPointer(data);
 
-    /* The allocated space will not be used anymore.
-     * We shall release the resource for further usage */
-    ::operator delete(static_cast<void*>(data));
+        sz      = 0;
+        cap     = nextPowerOf2(initializerList.size());  // Determine new capacity
+        data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));   // Allocate resource
+    }
 
-    // Adjust new resource
-    sz      = initializerList.size();
-    cap     = nextPowerOf2(sz);
+    /* Currently used posisitions inside the container are assignable.
+     * The rest of them needs construction by copying. */
+    if(0 == sz)
+        copyRangeForward(initializerList.begin(), initializerList.begin() + initializerList.size(), begin());
+    else if(initializerList.size() < sz)
+    {
+        assignRangeForward(initializerList.begin(), initializerList.begin() + initializerList.size(), begin());
+        destroyRange(begin() + initializerList.size(), end());
+    }
+    else /* (initializerList.size() > sz) */
+    {
+        assignRangeForward(initializerList.begin(), initializerList.begin() + sz, begin());
+        copyRangeForward(initializerList.begin() + sz, initializerList.end(), begin() + sz);
+    }
 
-    if(cap > 0)
-        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-    const_iterator sourceIt = initializerList.begin();
-
-    // Copy construct the elements at predetermined locations
-    for(size_type index = 0; index < sz; ++index, ++sourceIt)
-        new(data + index) value_type(*sourceIt);
+    sz = initializerList.size(); // Adjust size
 
     return *this;
 }

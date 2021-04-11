@@ -2,9 +2,9 @@
  * @file        VectorContainer.h
  * @details     A template vector container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
- * @date        March 30, 2021      -> First release
- *              March 31, 2021      -> Single value insert(..) added.
- *              April 1, 2021       ->
+ * @date        March 30, 2021 -> First release
+ *              March 31, 2021 -> Single value insert(..) added.
+ *              April 12, 2021 -> Allocation policy optimizated using placement new.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.

@@ -28,13 +28,13 @@ template<class T>
 class Vector{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
-    typedef T                value_type;
-    typedef T&               reference;
-    typedef const T&         const_reference;
-    typedef T*               iterator;
-    typedef const T*         const_iterator;
-    typedef std::ptrdiff_t   difference_type;
-    typedef std::size_t      size_type;
+    using value_type      = T             ;
+    using reference       = T&            ;
+    using const_reference = const T&      ;
+    using iterator        = T*            ;
+    using const_iterator  = const T*      ;
+    using difference_type = std::ptrdiff_t;
+    using size_type       = std::size_t   ;
 
     /*** Constructors and Destructors ***/
     Vector();                                                               // Default constructor
@@ -1353,7 +1353,6 @@ std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
 #endif
 
 /* *************** TODO LIST ***************
- * - Replace typedef with using
  * - Add [[nodiscard]]
  * - Noexcept specifiers
  * - use std::distance instead (last - first)

@@ -351,14 +351,16 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
  * @param   moveVector Vector to be used for resource swapping
  * @return  lvalue reference to the left vector to support cascaded calls
  * @note    The elements of the left vector will be destroyed
+ * @note    The resource of the right vector will be stolen
  */
 template<class T>
 Vector<T>& Vector<T>::operator=(Vector&& moveVector)
 {
-    if(this != &moveVector)     // Check self assignment
-        swap(moveVector);       // Steal resources of move(right) vector
+    if(this == &moveVector)     // Check self assignment
+        return *this;
 
-    moveVector.~Vector<T>();    // Destroy swapped resources
+    clear();            // Clear own content
+    swap(moveVector);   // Steal resources of move(right) vector
 
     return *this;
 }
@@ -1349,3 +1351,11 @@ std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
 }
 
 #endif
+
+/* *************** TODO LIST ***************
+ * - Replace typedef with using
+ * - Add [[nodiscard]]
+ * - Noexcept specifiers
+ * - use std::distance instead (last - first)
+ * - use a Grow(..) function instead of if(size() == capacity()) and the following algorithm
+ */

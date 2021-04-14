@@ -5,6 +5,7 @@
  * @date        March 30, 2021 -> First release
  *              March 31, 2021 -> Single value insert(..) added.
  *              April 12, 2021 -> Allocation policy optimizated using placement new.
+ *              April 14, 2021 -> Doxygen completed for all methods.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -57,8 +58,8 @@ public:
     const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
 
     /*** Element Access ***/
-    reference       at(const size_type position);           // Random access with range check
-    const_reference at(const size_type position) const;     // Random access with range check
+    reference       at(const size_type index);           // Random access with range check
+    const_reference at(const size_type index) const;     // Random access with range check
 
     reference       front()         { return data[0]; }     // Access to the first element
     const_reference front() const   { return data[0]; }     // Access to the first element
@@ -144,7 +145,7 @@ private:
     void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     void destroyRange(iterator from, iterator to);
-    void destroyPointer(iterator ptr);
+    void destroyPointer(iterator& ptr);
 };
 
 // Finds the next power of 2 which is greater than N.
@@ -164,10 +165,17 @@ std::size_t nextPowerOf2(std::size_t N)
     return maxValuedBit;
 }
 
+/**
+ * @brief Default constructor
+ */
 template<class T>
 Vector<T>::Vector() : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
 
+/**
+ * @brief Fill constructor
+ * @param numberOfElements Initial size of vector
+ */
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
@@ -182,6 +190,11 @@ Vector<T>::Vector(const size_type numberOfElements)
         new(data + index) value_type;
 }
 
+/**
+ * @brief Fill constructor with a reference fill value
+ * @param numberOfElements  Initial size of vector
+ * @param fillValue         Reference value for the construction of initial elements
+ */
 template<class T>
 Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
@@ -196,6 +209,11 @@ Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
         new(data + index) value_type(fillValue);
 }
 
+/**
+ * @brief Range constructor
+ * @param first Starting element of source
+ * @param last  Last element of source(excluded)
+ */
 template<class T>
 template<class InputIterator>
 Vector<T>::Vector(InputIterator first, InputIterator last)
@@ -218,6 +236,10 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
         throw(std::logic_error("Wrong iterator sequence!"));
 }
 
+/**
+ * @brief Copy constructor
+ * @param copyVector Vector to be copied from
+ */
 template<class T>
 Vector<T>::Vector(const Vector& copyVector)
 : sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr)
@@ -235,6 +257,10 @@ Vector<T>::Vector(const Vector& copyVector)
 
 }
 
+/**
+ * @brief Move constructor
+ * @param moveVector Vector to be used for resource stealing
+ */
 template<class T>
 Vector<T>::Vector(Vector&& moveVector)
 : sz(moveVector.size()), cap(moveVector.capacity()), data(moveVector.data)
@@ -244,6 +270,10 @@ Vector<T>::Vector(Vector&& moveVector)
     moveVector.data = nullptr;  // Source stolen
 }
 
+/**
+ * @brief Initializer List constructor
+ * @param std::initializerList source list
+ */
 template<class T>
 Vector<T>::Vector(std::initializer_list<value_type> initializerList)
 : sz(initializerList.size()), cap(nextPowerOf2(sz)), data(nullptr)
@@ -260,6 +290,10 @@ Vector<T>::Vector(std::initializer_list<value_type> initializerList)
         new(data + index) value_type(*sourceIt);
 }
 
+/**
+ * @brief   Destructor
+ * @note    Calls the destructors of each element individually
+ */
 template<class T>
 Vector<T>::~Vector()
 {
@@ -270,6 +304,12 @@ Vector<T>::~Vector()
     cap = 0;
 }
 
+/**
+ * @brief   Copy assignment operator
+ * @param   copyVector Vector to be copied from
+ * @return  lvalue reference to the left vector to support cascaded calls
+ * @note    The elements of the left vector will be destroyed
+ */
 template<class T>
 Vector<T>& Vector<T>::operator=(const Vector& copyVector)
 {
@@ -306,15 +346,29 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
     return *this;
 }
 
+/**
+ * @brief   Move assignment operator
+ * @param   moveVector Vector to be used for resource swapping
+ * @return  lvalue reference to the left vector to support cascaded calls
+ * @note    The elements of the left vector will be destroyed
+ */
 template<class T>
 Vector<T>& Vector<T>::operator=(Vector&& moveVector)
 {
     if(this != &moveVector)     // Check self assignment
         swap(moveVector);       // Steal resources of move(right) vector
 
+    moveVector.~Vector<T>();    // Destroy swapped resources
+
     return *this;
 }
 
+/**
+ * @brief   Initializer List assignment operator
+ * @param   std::initializer_list Source list
+ * @return  lvalue reference to the left vector to support cascaded calls
+ * @note    The elements of the left vector will be destroyed
+ */
 template<class T>
 Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
 {
@@ -348,24 +402,42 @@ Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerLis
     return *this;
 }
 
+/**
+ * @brief   Element access method
+ * @param   position Position of the element to be accessed
+ * @return  lvalue reference to the element at index
+ * @throws  std::out_of_range if the index is bigger than the size
+ */
 template<class T>
-T& Vector<T>::at(const size_type position)
+T& Vector<T>::at(const size_type index)
 {
-    if(position < sz)
-        return data[position];
+    if(index < sz)
+        return data[index];
 
     throw(std::out_of_range("Index is out-of-range!"));
 }
 
+/**
+ * @brief   Element access method
+ * @param   position Position of the element to be accessed
+ * @return  const lvalue reference to the element at index
+ * @throws  std::out_of_range if the index is bigger than the size
+ */
 template<class T>
-const T& Vector<T>::at(const size_type position) const
+const T& Vector<T>::at(const size_type index) const
 {
-    if(position < sz)
-        return data[position];
+    if(index < sz)
+        return data[index];
 
     throw(std::out_of_range("Index is out-of-range!"));
 }
 
+/**
+ * @brief   Range assign method
+ * @param   first   Source start point
+ * @param   last    Source end point
+ * @throws  std::logic_error If the iterators are not in a valid order
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::assign(InputIterator first, InputIterator last)
@@ -374,20 +446,13 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
 
     if(numberOfElements > 0)
     {        
-        // Destroy the elements of the vector
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
+        destroyRange(begin(), end());
 
         sz = numberOfElements;  // Determine new size
 
         if(numberOfElements > capacity())  // Is a bigger space needed?
         {
-            /* The allocated space will not be used anymore.
-             * We shall release the resource for further usage */
-            ::operator delete(static_cast<void*>(data));
+            destroyPointer(data);
 
             cap = nextPowerOf2(numberOfElements);
 
@@ -404,25 +469,24 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
         throw(std::logic_error("Wrong iterator sequence!"));
 }
 
+/**
+ * @brief   Fill assign with predetermined number of elements
+ * @param   numberOfElements    Number of elements to be assigned
+ * @param   fillValue           Assignment value
+ * @throws  std::logic_error    If zero elements wanted to be assigned
+ */
 template<class T>
 void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 {
     if(numberOfElements > 0)
     {
-        // Destroy the elements of the vector
-        /* The operator delete[] wouldn't work appropriately as we
-         * used the placement new operator and constructed each element
-         * at the time of the insertion*/
-        for(size_type index = 0; index < sz; ++index)
-            (data + index)->~value_type();
+        destroyRange(begin(), end());
 
         sz = numberOfElements;  // Determine new size
 
         if(numberOfElements > capacity())  // Is a bigger space needed?
         {
-            /* The allocated space will not be used anymore.
-             * We shall release the resource for further usage */
-            ::operator delete(static_cast<void*>(data));
+            destroyPointer(data);
 
             cap = nextPowerOf2(numberOfElements);
 
@@ -438,23 +502,20 @@ void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
         throw(std::invalid_argument("Assignment size error!"));
 }
 
+/**
+ * @brief Initializer list assignment
+ * @param initializerList   Source list
+ */
 template<class T>
 void Vector<T>::assign(std::initializer_list<T> initializerList)
 {
-    // Destroy the elements of the vector
-    /* The operator delete[] wouldn't work appropriately as we
-     * used the placement new operator and constructed each element
-     * at the time of the insertion*/
-    for(size_type index = 0; index < sz; ++index)
-        (data + index)->~value_type();
+    destroyRange(begin(), end());
 
     sz = initializerList.size();  // Determine new size
 
     if(initializerList.size() > capacity())  // Is a bigger space needed?
     {
-        /* The allocated space will not be used anymore.
-         * We shall release the resource for further usage */
-        ::operator delete(static_cast<void*>(data));
+        destroyPointer(data);
 
         cap = nextPowerOf2(initializerList.size());
 
@@ -470,6 +531,10 @@ void Vector<T>::assign(std::initializer_list<T> initializerList)
         new(data + index) value_type(*sourceIt);
 }
 
+/**
+ * @brief   Adds a new element at the end of the vector, after its current last element.
+ * @param   value   Value to be copied to the new element.
+ */
 template<class T>
 void Vector<T>::push_back(const value_type& value)
 {
@@ -492,6 +557,10 @@ void Vector<T>::push_back(const value_type& value)
     new(data + sz++) value_type(value);
 }
 
+/**
+ * @brief   Adds a new element at the end of the vector, after its current last element.
+ * @param   value   Value to be moved to the new element.
+ */
 template<class T>
 void Vector<T>::push_back(value_type&& value)
 {
@@ -514,6 +583,9 @@ void Vector<T>::push_back(value_type&& value)
     new(data + sz++) value_type(std::move(value));
 }
 
+/**
+ * @brief   Removes the last element in the vector by destroying it.
+ */
 template<class T>
 void Vector<T>::pop_back()
 {
@@ -524,6 +596,15 @@ void Vector<T>::pop_back()
     }
 }
 
+/**
+ * @brief   Range insertion method
+ * @param   position Position in the vector where the new elements are inserted.
+ * @param   first   Iterator specifying the starting point of elements.
+ * @param   last    Iterator specifying the ending point of elements.   (excluded)
+ * @return  An iterator that points to the first of the newly inserted elements.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ * @throws  std::logic_error        If the iterators are in a wrong order
+ */
 template<class T>
 template <class InputIterator>
 T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
@@ -584,6 +665,13 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
     return (data + positionAsIndex);
 }
 
+/**
+ * @brief   Copy insertion method
+ * @param   position    Position in the vector where the new elements are inserted.
+ * @param   value       Value to be copied to the inserted element.
+ * @return  An iterator that points to the newly inserted element.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ */
 template<class T>
 T* Vector<T>::insert(iterator position, const value_type& value)
 {
@@ -641,6 +729,15 @@ T* Vector<T>::insert(iterator position, const value_type& value)
     return (data + positionAsIndex);  // Data may be changed
 }
 
+/**
+ * @brief   Fill insertion method
+ * @param   position            Position in the vector where the new elements are inserted.
+ * @param   numberOfElements    Number of elements to be filled
+ * @param   value               Value to be copied to the inserted element
+ * @return  An iterator that points to the first of the newly inserted elements.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ * @throws  std::invalid_argument   If the number of elements to be inserted is equal to zero.
+ */
 template<class T>
 T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_type& value)
 {
@@ -698,6 +795,13 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
     return (data + positionAsIndex);
 }
 
+/**
+ * @brief   Move insertion method
+ * @param   position    Position in the vector where the new elements are inserted.
+ * @param   value       Value to be moved to the inserted element.
+ * @return  An iterator that points to the newly inserted element.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ */
 template<class T>
 T* Vector<T>::insert(iterator position, value_type&& value)
 {
@@ -755,6 +859,13 @@ T* Vector<T>::insert(iterator position, value_type&& value)
     return (data + positionAsIndex);  // Data may be changed
 }
 
+/**
+ * @brief   Initializer list insertion method
+ * @param   position        Position in the vector where the new elements are inserted.
+ * @param   initializerList Source list
+ * @return  An iterator that points to the newly inserted element.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ */
 template<class T>
 T* Vector<T>::insert(iterator position, std::initializer_list<value_type> initializerList)
 {
@@ -764,6 +875,12 @@ T* Vector<T>::insert(iterator position, std::initializer_list<value_type> initia
     return insert(position, initializerList.begin(), initializerList.end());
 }
 
+/**
+ * @brief   Erases the element from the given position by destroing it.
+ * @param   position    Position in the vector where the elements to be inserted relies.
+ * @return  An iterator pointing to the element that follows the erased element.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ */
 template<class T>
 T* Vector<T>::erase(iterator position)
 {
@@ -784,6 +901,14 @@ T* Vector<T>::erase(iterator position)
     return position;
 }
 
+/**
+ * @brief   Range erase method
+ * @param   first   Position where the erasing begins from
+ * @param   last    Position where the erasing ends at(excluded)
+ * @return  An iterator pointing to the element that follows the erased elements.
+ * @throws  std::invalid_argument   If the given positions does not rely inside the container.
+ * @throws  std::invalid_argument   If the given positions doesn't have valid order.
+ */
 template<class T>
 T* Vector<T>::erase(iterator first, iterator last)
 {
@@ -802,6 +927,10 @@ T* Vector<T>::erase(iterator first, iterator last)
     return first;
 }
 
+/**
+ * @brief   Swaps the contents of two vectors
+ * @param   swapVector  Vector to be swapped with
+ */
 template<class T>
 void Vector<T>::swap(Vector& swapVector)
 {
@@ -824,6 +953,12 @@ void Vector<T>::swap(Vector& swapVector)
     swapVector.cap  = tempSzCap;
 }
 
+/**
+ * @brief   Constructs and inserts element at given position
+ * @param   position    Position in the vector where the new elements are inserted.
+ * @param   args        Arguments to be used when constructing the new element
+ * @return  An iterator that points to the newly inserted element.
+ */
 template<class T>
 template <class... Args>
 T* Vector<T>::emplace(iterator position, Args&&... args)
@@ -878,6 +1013,10 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     return (data + positionAsIndex);  // Data may be changed
 }
 
+/**
+ * @brief   Constructs and inserts element at the end of the container.
+ * @param   args    Arguments to be used when constructing the new element
+ */
 template<class T>
 template <class... Args>
 void Vector<T>::emplace_back(Args&&... args)
@@ -901,6 +1040,10 @@ void Vector<T>::emplace_back(Args&&... args)
     new(data + sz++) value_type(args...);
 }
 
+/**
+ * @brief   Resizes the container so that it contains given number of elements.
+ * @param   newSize Requested size.
+ */
 template<class T>
 void Vector<T>::resize(const size_type newSize)
 {
@@ -943,6 +1086,11 @@ void Vector<T>::resize(const size_type newSize)
     sz = newSize;
 }
 
+/**
+ * @brief   Resizes the container so that it contains given number of elements.
+ * @param   newSize     Requested size.
+ * @param   fillValue   Value to be copied into newly added elements.
+ */
 template<class T>
 void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
 {
@@ -985,6 +1133,10 @@ void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
     sz = newSize;
 }
 
+/**
+ * @brief   Requests that the vector capacity be at least enough to contain requested number of elements.
+ * @param   reservationSize     Minimum capacity for the vector.
+ */
 template<class T>
 void Vector<T>::reserve(const size_type reservationSize)
 {
@@ -1004,6 +1156,10 @@ void Vector<T>::reserve(const size_type reservationSize)
     data = newData;
 }
 
+/**
+ * @brief   Requests the container to reduce its capacity to fit its size
+ * @note    Caueses reallocation if the current size is not equal to the current capacity.
+ */
 template<class T>
 void Vector<T>::shrink_to_fit()
 {
@@ -1021,6 +1177,13 @@ void Vector<T>::shrink_to_fit()
     data = newData;
 }
 
+/**
+ * @brief   Helper method for assigning ranges in a forward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Do not use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterator destination)
@@ -1029,6 +1192,12 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
         *destination = *from;
 }
 
+/**
+ * @brief   Helper method for assigning value to a range of elements in a forward order.
+ * @param   from    Starting point of destination range
+ * @param   to      Ending point of destination range(excluded)
+ * @param   value   Value to be copied to the elements in the destionation range.
+ */
 template<class T>
 void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value)
 {
@@ -1114,11 +1283,13 @@ void Vector<T>::destroyRange(iterator from, iterator to)
 }
 
 template<class T>
-void Vector<T>::destroyPointer(iterator ptr)
+void Vector<T>::destroyPointer(iterator& ptr)
 {
     /* The allocated space will not be used anymore.
      * We shall release the resource for further usage */
     ::operator delete(static_cast<void*>(ptr));
+
+    ptr = nullptr;
 }
 
 template<class T>

@@ -156,6 +156,8 @@ private:
     template<class InputIterator>
     void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
+    void grow(size_type newCap, bool copy = false, size_type gapIndex = 0, size_type gapSize = 0);
+
     void destroyRange(iterator from, iterator to);
     void destroyPointer(iterator& ptr);
 };
@@ -457,29 +459,21 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
-    if(numberOfElements > 0)
-    {        
-        destroyRange(begin(), end());
+    if(numberOfElements < 0)
+        throw(std::logic_error("Wrong iterator sequence!"));
 
-        sz = numberOfElements;  // Determine new size
-
-        if(numberOfElements > capacity())  // Is a bigger space needed?
-        {
-            destroyPointer(data);
-
-            cap = nextPowerOf2(numberOfElements);
-
-            // Allocate new resource
-            if(cap > 0)
-                data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-        }
-
-        // Copy construct the elements at predetermined locations
-        for(size_type index = 0; (index < cap) && (first != last); ++index, ++first)
-            new(data + index) value_type(*first);
+    if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
+    {
+        grow(nextPowerOf2(numberOfElements));   // Grow and destroy current elements
     }
     else
-        throw(std::logic_error("Wrong iterator sequence!"));
+    {
+        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
+    }
+
+    copyRangeForward(first, last, data);
+
+    sz = numberOfElements;  // Determine new size
 }
 
 /**
@@ -491,28 +485,17 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
 template<class T>
 void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 {
-    if(numberOfElements > 0)
+    if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
     {
-        destroyRange(begin(), end());
-
-        sz = numberOfElements;  // Determine new size
-
-        if(numberOfElements > capacity())  // Is a bigger space needed?
-        {
-            destroyPointer(data);
-
-            cap = nextPowerOf2(numberOfElements);
-
-            // Allocate new resource
-            if(cap > 0)
-                data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-        }
-
-        for(size_type index = 0; index < size_type(numberOfElements); ++index)
-            new(data + index) value_type(fillValue);
+        grow(nextPowerOf2(numberOfElements));   // Grow and destroy current elements
     }
     else
-        throw(std::invalid_argument("Assignment size error!"));
+    {
+        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
+    }
+
+    copyRangeForward(begin(), begin() + numberOfElements, fillValue);
+    sz = numberOfElements;
 }
 
 /**
@@ -522,26 +505,18 @@ void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 template<class T>
 void Vector<T>::assign(std::initializer_list<T> initializerList)
 {
-    destroyRange(begin(), end());
-
-    sz = initializerList.size();  // Determine new size
-
     if(initializerList.size() > capacity())  // Is a bigger space needed?
     {
-        destroyPointer(data);
-
-        cap = nextPowerOf2(initializerList.size());
-
-        // Allocate new resource
-        if(cap > 0)
-            data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        grow(nextPowerOf2(initializerList.size()));   // Grow and destroy current elements
+    }
+    else
+    {
+        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
     }
 
-    const_iterator sourceIt = initializerList.begin();
+    copyRangeForward(initializerList.begin(), initializerList.end(), begin());
 
-    // Copy construct the elements at predetermined locations
-    for(size_type index = 0; index < sz; ++index, ++sourceIt)
-        new(data + index) value_type(*sourceIt);
+    sz = initializerList.size();  // Determine new size
 }
 
 /**
@@ -552,22 +527,9 @@ template<class T>
 void Vector<T>::push_back(const value_type& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
-    {
-        /* A bigger place needed for current and incoming elements */
-        cap = nextPowerOf2(capacity());
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
 
-        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-        // Destroy old resource
-        destroyRange(begin(), end());
-        destroyPointer(data);
-
-        data = newData;
-    }
-
-    // Copy construct new element with the incoming one
-    new(data + sz++) value_type(value);
+    new(data + sz++) value_type(value); // Copy construct new element with the incoming one
 }
 
 /**
@@ -578,19 +540,7 @@ template<class T>
 void Vector<T>::push_back(value_type&& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
-    {
-        /* A bigger place needed for current and incoming elements */
-        cap = nextPowerOf2(capacity());
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-        // Destroy old resource
-        destroyRange(begin(), end());
-        destroyPointer(data);
-
-        data = newData;
-    }
+        grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
 
     // Move construct new element with the incoming
     new(data + sz++) value_type(std::move(value));
@@ -631,24 +581,15 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
     if(numberOfElements <= 0)
         throw(std::logic_error("Wrong iterator sequence!"));
 
-    value_type* newData = nullptr;  // A reallocation may be needed
-
-    /* If there will be reallocations for multiple times,
-     * we better reallocate for the final size in a single operation
-     * to enhance optimization of insertion. */
     if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
-        /* A bigger place needed for current and incoming elements */
-        cap = nextPowerOf2(size() + numberOfElements);
-        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        /* If there will be reallocations for multiple times,
+         * we better reallocate for the final size in a single operation
+         * to enhance optimization of insertion. */
+        grow(nextPowerOf2(size() + numberOfElements), true, positionAsIndex, numberOfElements);
 
-        // Copy the elements on the left side
-        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        copyRangeForward(first, last, data + positionAsIndex);  // Copy construct new elements at given position
     }
-
-    // Move the elements on the right side
-    if(newData != nullptr)  // If a reallocation happened
-        copyRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
@@ -658,19 +599,8 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
 
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - numberOfElements, position + numberOfElements);
-    }
 
-    if(newData != nullptr)  // If a reallocation happened
-        moveRangeForward(first, last, newData + positionAsIndex);   // Copy construct new elements at given position
-    else
-        assignRangeForward(first, last, position);  // Copy assign new elements at given position
-
-    if(newData != nullptr)  // Change data pointer if a reallocation happened
-    {
-        destroyRange(begin(), end());   // Explicitly destroy range
-        destroyPointer(data);           // Destroy data pointer
-
-        data = newData;                 // Assign new pointer
+        assignRangeForward(first, last, data + positionAsIndex);  // Copy assign new elements to the given position
     }
 
     sz += numberOfElements;
@@ -699,45 +629,27 @@ T* Vector<T>::insert(iterator position, const value_type& value)
     }
 
     const size_type positionAsIndex = size_type(std::distance(begin(), position));
-    value_type* newData = nullptr;  // A reallocation may be needed
 
-    if(size() == capacity())    // Reallocation needed
+    if(size() == capacity())    // Is bigger space needed?
     {
-        // New space for incoming data
-        cap = nextPowerOf2(capacity()); // Capacity changed
-        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        // Move the elements on the left side
-        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        new(data + positionAsIndex) value_type(value);
     }
-
-    // Move the elements on the right side
-    if(newData != nullptr)  // If a reallocation happened
-        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
     else
     {
-        /* If there wasn't a reallocation, then move constructing the last element is enough.
-         * The remaining ones should only be copy assigned(right shifted). */
+        /* If there wasn't a reallocation, then move constructing the elements
+         * that will locate after the current size is enough. The remaining
+         * ones should only be copy assigned(right shifted). */
         moveRangeForward(end() - 1, end(), end());
 
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
+
+        *(data + positionAsIndex) = value;
     }
 
-    if(newData != nullptr)  // If a reallocation happened
-        new(newData + positionAsIndex) value_type(value);   // Copy construct new element at given position
-    else
-        *(position) = value;    // Copy assign new element at given position
-
-    if(newData != nullptr)  // Change data pointer if a reallocation happened
-    {
-        destroyRange(begin(), end());   // Explicitly destroy range
-        destroyPointer(data);           // Destroy data pointer
-
-        data = newData;                 // Assign new pointer
-    }
-
-    sz++;
+    ++sz;   // Increment size by one
 
     return (data + positionAsIndex);  // Data may be changed
 }
@@ -761,24 +673,16 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
         throw(std::invalid_argument("At least one element must be inserted!"));
 
     difference_type positionAsIndex = std::distance(begin(), position);
-    value_type* newData = nullptr;  // A reallocation may be needed
 
-    /* If there will be reallocations for multiple times,
-     * we better reallocate for the final size in a single operation
-     * to enhance optimization of insertion. */
     if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
-        /* A bigger place needed for current and incoming elements */
-        cap = nextPowerOf2(size() + numberOfElements);
-        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        /* If there will be reallocations for multiple times,
+         * we better reallocate for the final size in a single operation
+         * to enhance optimization of insertion. */
+        grow(nextPowerOf2(size() + numberOfElements), true, positionAsIndex, numberOfElements);
 
-        // Move the elements on the left side
-        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        copyRangeForward(begin() + positionAsIndex, begin() + positionAsIndex + numberOfElements, value);  // Copy construct new elements at given position
     }
-
-    // Move the elements on the right side
-    if(newData != nullptr)  // If a reallocation happened
-        copyRangeForward(position, end(), newData + positionAsIndex + numberOfElements);   // Gap for the incoming ones
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
@@ -788,19 +692,8 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
 
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - numberOfElements, position + numberOfElements);
-    }
 
-    if(newData != nullptr)  // If a reallocation happened
-        moveRangeForward(newData + positionAsIndex, newData + positionAsIndex + numberOfElements, value);       // Copy construct new elements at given position
-    else
-        assignRangeForward(position, position + numberOfElements, value);     // Copy assign new elements at given position
-
-    if(newData != nullptr)  // Change data pointer if a reallocation happened
-    {
-        destroyRange(begin(), end());   // Explicitly destroy range
-        destroyPointer(data);           // Destroy data pointer
-
-        data = newData;                 // Assign new pointer
+        assignRangeForward(begin() + positionAsIndex, begin() + positionAsIndex + numberOfElements, value);  // Copy assign new elements to the given position
     }
 
     sz += numberOfElements;
@@ -829,45 +722,27 @@ T* Vector<T>::insert(iterator position, value_type&& value)
     }
 
     const size_type positionAsIndex = std::distance(begin(), position);
-    value_type* newData = nullptr;  // A reallocation may be needed
 
-    if(size() == capacity())    // Reallocation needed
+    if(size() == capacity())    // Is bigger space needed?
     {
-        // New space for incoming data
-        cap = nextPowerOf2(capacity()); // Capacity changed
-        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        // Move the elements on the left side
-        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        new(data + positionAsIndex) value_type(std::move(value));
     }
-
-    // Move the elements on the right side
-    if(newData != nullptr)  // If a reallocation happened
-        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
     else
     {
-        /* If there wasn't a reallocation, then move constructing the last element is enough.
-         * The remaining ones should only be copy assigned(right shifted). */
+        /* If there wasn't a reallocation, then move constructing the elements
+         * that will locate after the current size is enough. The remaining
+         * ones should only be copy assigned(right shifted). */
         moveRangeForward(end() - 1, end(), end());
 
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
+
+        *(data + positionAsIndex) = std::move(value);
     }
 
-    if(newData != nullptr)  // If a reallocation happened
-        new(newData + positionAsIndex) value_type(std::move(value));   // Copy construct new element at given position
-    else
-        *(position) = std::move(value);    // Move assign new element at given position
-
-    if(newData != nullptr)  // Change data pointer if a reallocation happened
-    {
-        destroyRange(begin(), end());   // Explicitly destroy range
-        destroyPointer(data);           // Destroy data pointer
-
-        data = newData;                 // Assign new pointer
-    }
-
-    sz++;
+    ++sz;   // Increment size by one
 
     return (data + positionAsIndex);  // Data may be changed
 }
@@ -979,46 +854,26 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    const size_type positionAsIndex = std::distance(begin(), position);
-    value_type* newData = nullptr;  // A reallocation may be needed
+    const size_type positionAsIndex = size_type(std::distance(begin(), position));
 
-    if(size() == capacity())    // Reallocation needed
+    if(size() == capacity())    // Is bigger space needed?
     {
-        // New space for incoming data
-        cap = nextPowerOf2(capacity()); // Capacity changed
-        newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        // Move the elements on the left side
-        copyRangeForward(begin(), position, newData);   // Copy construct existing elements at their new place
+        new(data + positionAsIndex) value_type(args...);
     }
-
-    // Move the elements on the right side
-    if(newData != nullptr)  // If a reallocation happened
-        copyRangeForward(position, end(), newData + positionAsIndex + 1);   // 1 element gap for the incoming one
     else
     {
-        /* If there wasn't a reallocation, then move constructing the last element is enough.
-         * The remaining ones should only be copy assigned(right shifted). */
+        /* If there wasn't a reallocation, then move constructing the elements
+         * that will locate after the current size is enough. The remaining
+         * ones should only be copy assigned(right shifted). */
         moveRangeForward(end() - 1, end(), end());
 
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
-    }
 
-    if(newData != nullptr)  // If a reallocation happened
-        new(newData + positionAsIndex) value_type(args...);   // Copy construct new element at given position
-    else
-    {
         position->~value_type();                // Destroy old element
         new(position) value_type(args...);      // Copy assign new element at given position
-    }
-
-    if(newData != nullptr)  // Change data pointer if a reallocation happened
-    {
-        destroyRange(begin(), end());   // Explicitly destroy range
-        destroyPointer(data);           // Destroy data pointer
-
-        data = newData;                 // Assign new pointer
     }
 
     sz++;
@@ -1036,17 +891,7 @@ void Vector<T>::emplace_back(Args&&... args)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
-        /* A bigger place needed for current and incoming elements */
-        cap = nextPowerOf2(capacity());
-        value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-        copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-        // Destroy old resource
-        destroyRange(begin(), end());
-        destroyPointer(data);
-
-        data = newData;
+        grow(nextPowerOf2(capacity()), true);
     }
 
     // Copy construct new element with the incoming one
@@ -1079,17 +924,7 @@ void Vector<T>::resize(const size_type newSize)
         }
         else    // Reallocation needed
         {
-            /* A bigger place needed for current and incoming elements */
-            cap = nextPowerOf2(newSize);
-            value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-            copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-            // Destroy old resource
-            destroyRange(begin(), end());
-            destroyPointer(data);
-
-            data = newData;
+            grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
 
             for(size_type index = size(); index < newSize; ++index)
                 new(data + index) value_type;   // Default construct new elements
@@ -1122,21 +957,11 @@ void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
         if(newSize < capacity())
         {
             for(size_type index = size(); index < newSize; ++index)
-                new(data + index) value_type(fillValue);   // Copy construct new elements
+                new(data + index) value_type;   // Default construct new elements
         }
         else    // Reallocation needed
         {
-            /* A bigger place needed for current and incoming elements */
-            cap = nextPowerOf2(newSize);
-            value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-            copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-            // Destroy old resource
-            destroyRange(begin(), end());
-            destroyPointer(data);
-
-            data = newData;
+            grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
 
             for(size_type index = size(); index < newSize; ++index)
                 new(data + index) value_type(fillValue);   // Copy construct new elements
@@ -1156,17 +981,7 @@ void Vector<T>::reserve(const size_type reservationSize)
     if(reservationSize <= capacity())
         return;
 
-    /* A bigger place needed for current and incoming elements */
-    cap = reservationSize;
-    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
-
-    copyRangeForward(begin(), end(), newData);  // Copy construct elements at their new place
-
-    // Destroy old resource
-    destroyRange(begin(), end());
-    destroyPointer(data);
-
-    data = newData;
+    return grow(reservationSize, true);
 }
 
 /**
@@ -1331,6 +1146,46 @@ void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator
         new(destination) value_type(*(to - 1));
 }
 
+/**
+ * @brief   Grows the size of the vector either by copying the content or not
+ * @param   newCap      Requested capacity
+ * @param   copy        Copy the content or not
+ * @param   gapIndex    Starting index of the gap if needed
+ * @param   gapSize     Size of the requested gap
+ * @throw   std::invalid_argument   If the requested size is smaller than potential capacity
+ * @throw   std::invalid_argument   If the gap index is outside of the container
+ */
+template<class T>
+void Vector<T>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
+{
+    if(newCap <= cap + gapSize)
+        throw std::invalid_argument("Cannot grow to a smaller capacity!");
+
+    if(gapIndex > size())
+        throw std::invalid_argument("Cannot create gap outside of the container!");
+
+    // Allocate new space
+    cap = newCap;
+    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+
+    if(true == copy)    // If copying the old items is needed
+    {
+        if(gapSize > 0) // Is a gap needed?
+        {
+            copyRangeForward(begin(),               begin() + gapIndex, newData);                       // Copy items on the left side of the gap
+            copyRangeForward(begin() + gapIndex,    end(),              newData + gapIndex + gapSize);  // Copy items on the right side of the gap
+        }
+        else
+        {
+            copyRangeForward(begin(), end(), newData);
+        }
+    }
+
+    destroyRange(begin(), end());
+    destroyPointer(data);
+
+    data = newData;
+}
 
 template<class T>
 void Vector<T>::destroyRange(iterator from, iterator to)
@@ -1365,5 +1220,4 @@ std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
 
 /* *************** TODO LIST ***************
  * - Noexcept specifiers
- * - use a Grow(..) function instead of if(size() == capacity()) and the following algorithm
  */

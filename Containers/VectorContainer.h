@@ -23,6 +23,14 @@
 #include <new>                  // For ::operator new
 #include <ostream>              // For std::cout
 
+/*** Special definitions ***/
+// If the C++ version is greater or equal to 2017xx
+#if __cplusplus >= 201703l
+#define NODISCARD [[nodiscard]]
+#else
+#define NODISCARD
+#endif
+
 /*** Container Class ***/
 template<class T>
 class Vector{
@@ -54,26 +62,26 @@ public:
     Vector& operator=(Vector&& moveVector);                                 // Move assignment operator
     Vector& operator=(std::initializer_list<value_type> initializerList);   // Initializer list assignment operator
 
-    reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
-    const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
+    NODISCARD reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
+    NODISCARD const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
 
     /*** Element Access ***/
-    reference       at(const size_type index);           // Random access with range check
-    const_reference at(const size_type index) const;     // Random access with range check
+    NODISCARD reference       at(const size_type index);           // Random access with range check
+    NODISCARD const_reference at(const size_type index) const;     // Random access with range check
 
-    reference       front()         { return data[0]; }     // Access to the first element
-    const_reference front() const   { return data[0]; }     // Access to the first element
+    NODISCARD reference       front()         { return data[0]; }     // Access to the first element
+    NODISCARD const_reference front() const   { return data[0]; }     // Access to the first element
 
-    reference       back()          { return data[sz - 1]; }    // Access to the last element
-    const_reference back() const    { return data[sz - 1]; }    // Access to the last element
+    NODISCARD reference       back()          { return data[sz - 1]; }    // Access to the last element
+    NODISCARD const_reference back() const    { return data[sz - 1]; }    // Access to the last element
 
     /*** Iterators ***/
-    iterator begin()                { return data;      }   // Iterator starting from the first element
-    iterator end()                  { return data + sz; }   // Iterator starting from the next of the last element
-    const_iterator begin()  const   { return data;      }   // Iterator starting from the first element
-    const_iterator end()    const   { return data + sz; }   // Iterator starting from the next of the last element
-    const_iterator cbegin() const   { return data;      }   // Iterator starting from the first element
-    const_iterator cend()   const   { return data + sz; }   // Iterator starting from the next of the last element
+    NODISCARD iterator begin()                { return data;      }   // Iterator starting from the first element
+    NODISCARD iterator end()                  { return data + sz; }   // Iterator starting from the next of the last element
+    NODISCARD const_iterator begin()  const   { return data;      }   // Iterator starting from the first element
+    NODISCARD const_iterator end()    const   { return data + sz; }   // Iterator starting from the next of the last element
+    NODISCARD const_iterator cbegin() const   { return data;      }   // Iterator starting from the first element
+    NODISCARD const_iterator cend()   const   { return data + sz; }   // Iterator starting from the next of the last element
 
     /*** Modifiers ***/
     template<class InputIterator>
@@ -111,10 +119,10 @@ public:
     void shrink_to_fit();
 
     /*** Size and Capacity Checkers ***/
-    size_type size()        const { return sz;          }
-    size_type capacity()    const { return cap;         }
+    NODISCARD size_type size()        const { return sz;          }
+    NODISCARD size_type capacity()    const { return cap;         }
     // size_type max_size() const {                     }        // TODO Search for implementation
-    bool empty()            const { return (sz == 0);   }
+    NODISCARD bool empty()            const { return (sz == 0);   }
 
 private:
     /*** Members ***/

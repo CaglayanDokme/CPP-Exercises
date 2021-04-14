@@ -1196,7 +1196,7 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
  * @brief   Helper method for assigning value to a range of elements in a forward order.
  * @param   from    Starting point of destination range
  * @param   to      Ending point of destination range(excluded)
- * @param   value   Value to be copied to the elements in the destionation range.
+ * @param   value   Value to be copied to the elements in the destination range.
  */
 template<class T>
 void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value)
@@ -1205,6 +1205,13 @@ void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type&
         *from = value;
 }
 
+/**
+ * @brief   Helper method for assigning ranges in a forward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination)
@@ -1217,6 +1224,13 @@ void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterat
         *destination = *(to - 1);   // Copy assign element
 }
 
+/**
+ * @brief   Helper method for moving ranges in a forward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Do not use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator destination)
@@ -1225,6 +1239,12 @@ void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator 
         new(destination) value_type(std::move(*from));
 }
 
+/**
+ * @brief   Helper method for move assigning value to a range of elements in a forward order.
+ * @param   from    Starting point of destination range
+ * @param   to      Ending point of destination range(excluded)
+ * @param   value   Value to be move assigned to the elements in the destination range.
+ */
 template<class T>
 void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& value)
 {
@@ -1232,6 +1252,13 @@ void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& v
         *from = std::move(value);
 }
 
+/**
+ * @brief   Helper method for moving ranges in a backward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination)
@@ -1244,6 +1271,13 @@ void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator
         new(destination) value_type(std::move(*(to - 1)));
 }
 
+/**
+ * @brief   Helper method for copying ranges in a forward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Do not use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator destination)
@@ -1252,13 +1286,26 @@ void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator 
         new(destination) value_type(*from);
 }
 
+/**
+ * @brief   Helper method for copy assigning value to a range of elements in a forward order.
+ * @param   from    Starting point of destination range
+ * @param   to      Ending point of destination range(excluded)
+ * @param   value   Value to be copy assigned to the elements in the destination range.
+ */
 template<class T>
 void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& value)
 {
     for( ; from != to; ++from)
-        *from = value;
+        new(from) value_type(value);
 }
 
+/**
+ * @brief   Helper method for copying ranges in a backward order.
+ * @param   from            Starting point of source range
+ * @param   to              Ending point of source range(excluded)
+ * @param   destination     Starting point of destination range
+ * @note    Use if the ranges overlaps each other
+ */
 template<class T>
 template<class InputIterator>
 void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination)

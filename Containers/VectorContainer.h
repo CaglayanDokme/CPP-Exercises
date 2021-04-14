@@ -6,9 +6,12 @@
  *              March 31, 2021 -> Single value insert(..) added.
  *              April 12, 2021 -> Allocation policy optimizated using placement new.
  *              April 14, 2021 -> Doxygen completed for all methods.
+ *                             -> Nodiscard attribute added to related functions.
+ *                             -> std::distance used for calculating the number of elements using input iterators
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
+ *
  */
 
 /*** Recursive inclusion preventer ***/
@@ -16,12 +19,13 @@
 #define VECTOR_CONTAINER_H
 
 /*** Libraries ***/
-#include <cstddef>              // For std::size_t, ptrdiff_t
-#include <initializer_list>     // For std::initializer_list
-#include <stdexcept>            // For exceptions
-#include <utility>              // For std::move
-#include <new>                  // For ::operator new
-#include <ostream>              // For std::cout
+#include <initializer_list>     // std::initializer_list
+#include <stdexcept>            // exceptions
+#include <iterator>             // std::distance
+#include <cstddef>              // std::size_t, ptrdiff_t
+#include <utility>              // std::move
+#include <ostream>              // std::cout
+#include <new>                  // ::operator new
 
 /*** Special definitions ***/
 // If the C++ version is greater or equal to 2017xx
@@ -226,7 +230,7 @@ template<class T>
 template<class InputIterator>
 Vector<T>::Vector(InputIterator first, InputIterator last)
 {
-    const difference_type numberOfElements = last - first;
+    const difference_type numberOfElements = std::distance(first, last);
 
     if(numberOfElements > 0)
     {
@@ -234,11 +238,10 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
         cap     = nextPowerOf2(sz);
 
         // Allocate space for incoming elements
-        // Construct will take place at each element insertion
+        // Construction will take place at each element insertion
         data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
 
-        for(size_type index = 0; (index < cap) && (first != last); ++index, ++first)
-            new(data + index) value_type(*first);
+        copyRangeForward(first, last, data);
     }
     else
         throw(std::logic_error("Wrong iterator sequence!"));
@@ -452,7 +455,7 @@ template<class T>
 template<class InputIterator>
 void Vector<T>::assign(InputIterator first, InputIterator last)
 {
-    const difference_type numberOfElements = last - first;
+    const difference_type numberOfElements = std::distance(first, last);
 
     if(numberOfElements > 0)
     {        
@@ -622,8 +625,8 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    difference_type numberOfElements    = last - first;
-    difference_type positionAsIndex     = position - begin();
+    const difference_type numberOfElements    = std::distance(first, last);
+    const difference_type positionAsIndex     = std::distance(begin(), position);
 
     if(numberOfElements <= 0)
         throw(std::logic_error("Wrong iterator sequence!"));
@@ -695,7 +698,7 @@ T* Vector<T>::insert(iterator position, const value_type& value)
         return (end() - 1);     // end() may be changed
     }
 
-    const size_type positionAsIndex = size_type(position - begin());
+    const size_type positionAsIndex = size_type(std::distance(begin(), position));
     value_type* newData = nullptr;  // A reallocation may be needed
 
     if(size() == capacity())    // Reallocation needed
@@ -757,7 +760,7 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
     if(numberOfElements == 0)
         throw(std::invalid_argument("At least one element must be inserted!"));
 
-    difference_type positionAsIndex = position - begin();
+    difference_type positionAsIndex = std::distance(begin(), position);
     value_type* newData = nullptr;  // A reallocation may be needed
 
     /* If there will be reallocations for multiple times,
@@ -825,7 +828,7 @@ T* Vector<T>::insert(iterator position, value_type&& value)
         return (end() - 1);     // end() may be changed
     }
 
-    const size_type positionAsIndex = size_type(position - begin());
+    const size_type positionAsIndex = std::distance(begin(), position);
     value_type* newData = nullptr;  // A reallocation may be needed
 
     if(size() == capacity())    // Reallocation needed
@@ -928,7 +931,7 @@ T* Vector<T>::erase(iterator first, iterator last)
     if(last == first)
         throw(std::invalid_argument("Invalid iterator sequence!"));
 
-    const difference_type distance = last - first;
+    const difference_type distance = std::distance(first, last);
 
     assignRangeForward(first + distance, end(), first); // Shift left the elements on the right
     destroyRange(end() - distance, end());
@@ -976,7 +979,7 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    const size_type positionAsIndex = size_type(position - begin());
+    const size_type positionAsIndex = std::distance(begin(), position);
     value_type* newData = nullptr;  // A reallocation may be needed
 
     if(size() == capacity())    // Reallocation needed
@@ -1361,8 +1364,6 @@ std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
 #endif
 
 /* *************** TODO LIST ***************
- * - Add [[nodiscard]]
  * - Noexcept specifiers
- * - use std::distance instead (last - first)
  * - use a Grow(..) function instead of if(size() == capacity()) and the following algorithm
  */

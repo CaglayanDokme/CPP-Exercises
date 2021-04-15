@@ -59,13 +59,13 @@ private:
 
 public:
     /*** C++ Standard Named Requirements for Containers ***/
-    typedef T               value_type;
-    typedef std::size_t     size_type;
-    typedef T&              reference;
-    typedef const T&        const_reference;
-    typedef T*              pointer;
-    typedef const T*        const_pointer;
-    typedef ptrdiff_t       difference_type;
+    using value_type      = T          ;
+    using size_type       = std::size_t;
+    using reference       = T&         ;
+    using const_reference = const T&   ;
+    using pointer         = T*         ;
+    using const_pointer   = const T*   ;
+    using difference_type = ptrdiff_t  ;
 
     /*** Forward declarations ***/
     class iterator;

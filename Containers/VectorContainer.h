@@ -38,17 +38,6 @@
 #define NODISCARD
 #endif
 
-#define NOEXCEPT_CTOR(T)                noexcept(std::is_nothrow_default_constructible_v<T>)
-#define NOEXCEPT_COPY_CTOR(T)           noexcept(std::is_nothrow_copy_constructible_v<T>)
-#define NOEXCEPT_MOVE_CTOR(T)           noexcept(std::is_nothrow_move_constructible_v<T>)
-#define NOEXCEPT_SWAP(T)                noexcept(std::is_nothrow_swappable_v<T>)
-#define NOEXCEPT_DTOR(T)                noexcept(std::is_nothrow_destructible_v<T>)
-#define NOEXCEPT_DTOR_n_CTOR(T, args)   noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_constructible_v<T, args>)
-#define NOEXCEPT_DTOR_n_COPY(T)         noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_copy_constructible_v<T>)
-#define NOEXCEPT_DTOR_n_MOVE(T)         noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_move_constructible_v<T>)
-#define NOEXCEPT_DTOR_CTOR_n_COPY(T)    noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_default_constructible_v<T> && std::is_nothrow_copy_constructible_v<T>)
-#define NOEXCEPT_COPY_ASSIGN(T)         noexcept(std::is_nothrow_assignable_v<T>)
-
 /*** Container Class ***/
 template<class T>
 class Vector{
@@ -64,21 +53,21 @@ public:
 
     /*** Constructors and Destructors ***/
     Vector() noexcept;  // Default constructor
-    Vector(const size_type numberOfElements) NOEXCEPT_CTOR(T); // Fill constructor
-    Vector(const size_type numberOfElements, const value_type& fillValue) NOEXCEPT_COPY_CTOR(T);    // Fill construcotr with fill value
+    Vector(const size_type numberOfElements);   // Fill constructor
+    Vector(const size_type numberOfElements, const value_type& fillValue);    // Fill construcotr with fill value
 
     template<class InputIterator>
-    Vector(InputIterator first, InputIterator last) NOEXCEPT_COPY_CTOR(T);              // Range constructor
-    Vector(const Vector& copyVector) NOEXCEPT_COPY_CTOR(T);                             // Copy constructor
-    Vector(Vector&& moveVector) NOEXCEPT_SWAP(T*);                                      // Move constructor
-    Vector(std::initializer_list<value_type> initializerList) NOEXCEPT_COPY_CTOR(T);    // Initializer list constructor
+    Vector(InputIterator first, InputIterator last);                        // Range constructor
+    Vector(const Vector& copyVector);                                       // Copy constructor
+    Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>);  // Move constructor
+    Vector(std::initializer_list<value_type> initializerList);              // Initializer list constructor
 
-    ~Vector() NOEXCEPT_DTOR(T);  // Destructor
+    ~Vector() noexcept(std::is_nothrow_destructible_v<T>);  // Destructor
 
     /*** Operator Overloadings ***/
-    Vector& operator=(const Vector& copyVector) NOEXCEPT_DTOR_n_COPY(T);       // Copy assignment operator
-    Vector& operator=(Vector&& moveVector) NOEXCEPT_SWAP(T*);                  // Move assignment operator
-    Vector& operator=(std::initializer_list<value_type> initializerList) NOEXCEPT_DTOR_n_COPY(T);   // Initializer list assignment operator
+    Vector& operator=(const Vector& copyVector);                            // Copy assignment operator
+    Vector& operator=(std::initializer_list<value_type> initializerList);   // Initializer list assignment operator
+    Vector& operator=(Vector&& moveVector) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_swappable_v<T*>);     // Move assignment operator
 
     NODISCARD reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
     NODISCARD const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
@@ -103,14 +92,14 @@ public:
 
     /*** Modifiers ***/
     template<class InputIterator>
-    void assign(InputIterator first, InputIterator last) NOEXCEPT_DTOR_n_COPY(T);                   // Range assign
-    void assign(size_type numberOfElements, const value_type& fillValue) NOEXCEPT_DTOR_n_COPY(T);   // Fill assign
-    void assign(std::initializer_list<value_type> initializerList) NOEXCEPT_DTOR_n_COPY(T);         // Initializer list assign
+    void assign(InputIterator first, InputIterator last);                   // Range assign
+    void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
+    void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
-    void push_back(const value_type& value) NOEXCEPT_DTOR_n_COPY(T);    // Push element next to the last element
-    void push_back(value_type&& value) NOEXCEPT_DTOR_n_MOVE(T);         // Push element next to the last element by moving
+    void push_back(const value_type& value);    // Push element next to the last element
+    void push_back(value_type&& value);         // Push element next to the last element by moving
 
-    void pop_back() NOEXCEPT_DTOR(T);    // Remove last element
+    void pop_back() noexcept(std::is_nothrow_destructible_v<T>);    // Remove last element
 
     template <class InputIterator>
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
@@ -122,19 +111,19 @@ public:
     iterator erase(iterator position);              // Single element erase
     iterator erase(iterator first, iterator last);  // Iterator based multiple erase
 
-    void swap(Vector& swapVector) NOEXCEPT_SWAP(T*);  // Swap
-    void clear() NOEXCEPT_DTOR(T) { destroyRange(begin(), end()); sz = 0; }
+    void swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*>);  // Swap
+    void clear() noexcept(std::is_nothrow_destructible_v<T>) { destroyRange(begin(), end()); sz = 0; }
 
     template <class... Args>
     iterator emplace(iterator position, Args&&... args);
 
     template <class... Args>
-    void emplace_back(Args&&... args) NOEXCEPT_DTOR_n_CTOR(T, Args...);
+    void emplace_back(Args&&... args);
 
-    void resize(const size_type newSize) NOEXCEPT_DTOR_CTOR_n_COPY(T);  // Simple resize
-    void resize(const size_type newSize, const value_type& fillValue) NOEXCEPT_DTOR_n_COPY(T);  // Resize and fill
-    void reserve(const size_type reservationSize) NOEXCEPT_DTOR_n_COPY(T);
-    void shrink_to_fit() NOEXCEPT_DTOR_n_COPY(T);
+    void resize(const size_type newSize);  // Simple resize
+    void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
+    void reserve(const size_type reservationSize);
+    void shrink_to_fit();
 
     /*** Size and Capacity Checkers ***/
     NODISCARD size_type size()        const noexcept { return sz;          }
@@ -150,25 +139,25 @@ private:
 
     /*** Helper Functions ***/
     template<class InputIterator>
-    void assignRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_ASSIGN(T);
-    void assignRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_COPY_ASSIGN(T);
+    void assignRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void assignRangeForward(iterator from, iterator to, const value_type& value);
 
     template<class InputIterator>
-    void assignRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_ASSIGN(T);
+    void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
-    void moveRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_MOVE_CTOR(T);
-    void moveRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_MOVE_CTOR(T);
+    void moveRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void moveRangeForward(iterator from, iterator to, const value_type& value);
 
     template<class InputIterator>
-    void moveRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_MOVE_CTOR(T);
+    void moveRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
-    void copyRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_CTOR(T);
-    void copyRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_COPY_CTOR(T);
+    void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void copyRangeForward(iterator from, iterator to, const value_type& value);
 
     template<class InputIterator>
-    void copyRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_CTOR(T);
+    void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     void grow(size_type newCap, bool copy = false, size_type gapIndex = 0, size_type gapSize = 0);
 
@@ -206,7 +195,7 @@ Vector<T>::Vector() noexcept
  * @param numberOfElements Initial size of vector
  */
 template<class T>
-Vector<T>::Vector(const size_type numberOfElements) noexcept(std::is_nothrow_default_constructible_v<T>)
+Vector<T>::Vector(const size_type numberOfElements)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
@@ -224,7 +213,7 @@ Vector<T>::Vector(const size_type numberOfElements) noexcept(std::is_nothrow_def
  * @param fillValue         Reference value for the construction of initial elements
  */
 template<class T>
-Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue) noexcept(std::is_nothrow_copy_constructible_v<T>)
+Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
@@ -242,7 +231,7 @@ Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
  */
 template<class T>
 template<class InputIterator>
-Vector<T>::Vector(InputIterator first, InputIterator last) noexcept(std::is_nothrow_copy_constructible_v<T>)
+Vector<T>::Vector(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
@@ -261,7 +250,7 @@ Vector<T>::Vector(InputIterator first, InputIterator last) noexcept(std::is_noth
  * @param copyVector Vector to be copied from
  */
 template<class T>
-Vector<T>::Vector(const Vector& copyVector) noexcept(std::is_nothrow_copy_constructible_v<T>)
+Vector<T>::Vector(const Vector& copyVector)
 : sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr)
 {
     // Allocate space for incoming elements
@@ -290,7 +279,7 @@ Vector<T>::Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>)
  * @param std::initializerList source list
  */
 template<class T>
-Vector<T>::Vector(std::initializer_list<value_type> initializerList) noexcept(std::is_nothrow_copy_constructible_v<T>)
+Vector<T>::Vector(std::initializer_list<value_type> initializerList)
 : sz(initializerList.size()), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
@@ -310,7 +299,7 @@ Vector<T>::Vector(std::initializer_list<value_type> initializerList) noexcept(st
  * @note    Calls the destructors of each element individually
  */
 template<class T>
-Vector<T>::~Vector() NOEXCEPT_DTOR(T)
+Vector<T>::~Vector() noexcept(std::is_nothrow_destructible_v<T>)
 {
     destroyRange(begin(), end());
     destroyPointer(data);
@@ -327,7 +316,7 @@ Vector<T>::~Vector() NOEXCEPT_DTOR(T)
  * @note    The elements of the left vector will be destroyed
  */
 template<class T>
-Vector<T>& Vector<T>::operator=(const Vector& copyVector) NOEXCEPT_DTOR_n_COPY(T)
+Vector<T>& Vector<T>::operator=(const Vector& copyVector)
 {
     if(this == &copyVector) // Check self assignment
         return *this;
@@ -370,7 +359,7 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector) NOEXCEPT_DTOR_n_COPY(T
  * @note    The resource of the right vector will be stolen
  */
 template<class T>
-Vector<T>& Vector<T>::operator=(Vector&& moveVector) NOEXCEPT_SWAP(T*)
+Vector<T>& Vector<T>::operator=(Vector&& moveVector) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_swappable_v<T*>)
 {
     if(this == &moveVector)     // Check self assignment
         return *this;
@@ -388,7 +377,7 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector) NOEXCEPT_SWAP(T*)
  * @note    The elements of the left vector will be destroyed
  */
 template<class T>
-Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList) NOEXCEPT_DTOR_n_COPY(T)
+Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
 {
     if(initializerList.size() > capacity()) // Reallocation needed?
     {
@@ -457,7 +446,7 @@ const T& Vector<T>::at(const size_type index) const
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::assign(InputIterator first, InputIterator last) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::assign(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
@@ -482,7 +471,7 @@ void Vector<T>::assign(InputIterator first, InputIterator last) NOEXCEPT_DTOR_n_
  * @throws  std::logic_error    If zero elements wanted to be assigned
  */
 template<class T>
-void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
 {
     if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
     {
@@ -502,7 +491,7 @@ void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue) 
  * @param initializerList   Source list
  */
 template<class T>
-void Vector<T>::assign(std::initializer_list<T> initializerList) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::assign(std::initializer_list<T> initializerList)
 {
     if(initializerList.size() > capacity())  // Is a bigger space needed?
     {
@@ -523,7 +512,7 @@ void Vector<T>::assign(std::initializer_list<T> initializerList) NOEXCEPT_DTOR_n
  * @param   value   Value to be copied to the new element.
  */
 template<class T>
-void Vector<T>::push_back(const value_type& value) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::push_back(const value_type& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
         grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
@@ -536,7 +525,7 @@ void Vector<T>::push_back(const value_type& value) NOEXCEPT_DTOR_n_COPY(T)
  * @param   value   Value to be moved to the new element.
  */
 template<class T>
-void Vector<T>::push_back(value_type&& value) NOEXCEPT_DTOR_n_MOVE(T)
+void Vector<T>::push_back(value_type&& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
         grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
@@ -549,7 +538,7 @@ void Vector<T>::push_back(value_type&& value) NOEXCEPT_DTOR_n_MOVE(T)
  * @brief   Removes the last element in the vector by destroying it.
  */
 template<class T>
-void Vector<T>::pop_back() NOEXCEPT_DTOR(T)
+void Vector<T>::pop_back() noexcept(std::is_nothrow_destructible_v<T>)
 {
     if(size() > 0)
     {
@@ -819,7 +808,7 @@ T* Vector<T>::erase(iterator first, iterator last)
  * @param   swapVector  Vector to be swapped with
  */
 template<class T>
-void Vector<T>::swap(Vector& swapVector) NOEXCEPT_SWAP(T*)
+void Vector<T>::swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*>)
 {
     if(this == &swapVector) // Check self swap
         return;
@@ -886,7 +875,7 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
  */
 template<class T>
 template <class... Args>
-void Vector<T>::emplace_back(Args&&... args) NOEXCEPT_DTOR_n_CTOR(T, Args...)
+void Vector<T>::emplace_back(Args&&... args)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
@@ -902,7 +891,7 @@ void Vector<T>::emplace_back(Args&&... args) NOEXCEPT_DTOR_n_CTOR(T, Args...)
  * @param   newSize Requested size.
  */
 template<class T>
-void Vector<T>::resize(const size_type newSize) NOEXCEPT_DTOR_CTOR_n_COPY(T)
+void Vector<T>::resize(const size_type newSize)
 {
     if(0 == newSize)
         return clear();
@@ -939,7 +928,7 @@ void Vector<T>::resize(const size_type newSize) NOEXCEPT_DTOR_CTOR_n_COPY(T)
  * @param   fillValue   Value to be copied into newly added elements.
  */
 template<class T>
-void Vector<T>::resize(const size_type newSize, const value_type& fillValue) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
 {
     if(0 == newSize)
         return clear();
@@ -975,7 +964,7 @@ void Vector<T>::resize(const size_type newSize, const value_type& fillValue) NOE
  * @param   reservationSize     Minimum capacity for the vector.
  */
 template<class T>
-void Vector<T>::reserve(const size_type reservationSize) NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::reserve(const size_type reservationSize)
 {
     if(reservationSize <= capacity())
         return;
@@ -988,7 +977,7 @@ void Vector<T>::reserve(const size_type reservationSize) NOEXCEPT_DTOR_n_COPY(T)
  * @note    Caueses reallocation if the current size is not equal to the current capacity.
  */
 template<class T>
-void Vector<T>::shrink_to_fit() NOEXCEPT_DTOR_n_COPY(T)
+void Vector<T>::shrink_to_fit()
 {
     if(size() == capacity())
         return;
@@ -1013,7 +1002,7 @@ void Vector<T>::shrink_to_fit() NOEXCEPT_DTOR_n_COPY(T)
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_ASSIGN(T)
+void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
         *destination = *from;
@@ -1026,7 +1015,7 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
  * @param   value   Value to be copied to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_COPY_ASSIGN(T)
+void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value)
 {
     for( ; from != to; ++from)
         *from = value;
@@ -1041,7 +1030,7 @@ void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type&
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_ASSIGN(T)
+void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward assigning will help to prevent corruption of data
      * when two ranges overlap each other. */
@@ -1060,7 +1049,7 @@ void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterat
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_MOVE_CTOR(T)
+void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
         new(destination) value_type(std::move(*from));
@@ -1073,7 +1062,7 @@ void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   value   Value to be move assigned to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_MOVE_CTOR(T)
+void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& value)
 {
     for( ; from != to; ++from)
         *from = std::move(value);
@@ -1088,7 +1077,7 @@ void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& v
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_MOVE_CTOR(T)
+void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward copying will help to prevent corruption of data
      * when two ranges overlap each other. */
@@ -1107,7 +1096,7 @@ void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_CTOR(T)
+void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
         new(destination) value_type(*from);
@@ -1120,7 +1109,7 @@ void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   value   Value to be copy assigned to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& value) NOEXCEPT_COPY_CTOR(T)
+void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& value)
 {
     for( ; from != to; ++from)
         new(from) value_type(value);
@@ -1135,7 +1124,7 @@ void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& v
  */
 template<class T>
 template<class InputIterator>
-void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination) NOEXCEPT_COPY_CTOR(T)
+void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward copying will help to prevent corruption of data
      * when two ranges overlap each other. */

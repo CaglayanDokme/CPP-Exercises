@@ -173,7 +173,7 @@ private:
     void grow(size_type newCap, bool copy = false, size_type gapIndex = 0, size_type gapSize = 0);
 
     void destroyRange(iterator from, iterator to);
-    void destroyPointer(iterator& ptr);
+    void destroyPointer(iterator ptr);
 };
 
 // Finds the next power of 2 which is greater than N.
@@ -315,8 +315,9 @@ Vector<T>::~Vector() NOEXCEPT_DTOR(T)
     destroyRange(begin(), end());
     destroyPointer(data);
 
-    sz  = 0;
-    cap = 0;
+    sz      = 0;
+    cap     = 0;
+    data    = nullptr;
 }
 
 /**
@@ -1196,13 +1197,11 @@ void Vector<T>::destroyRange(iterator from, iterator to)
 }
 
 template<class T>
-void Vector<T>::destroyPointer(iterator& ptr)
+void Vector<T>::destroyPointer(iterator ptr)
 {
     /* The allocated space will not be used anymore.
      * We shall release the resource for further usage */
     ::operator delete(static_cast<void*>(ptr));
-
-    ptr = nullptr;
 }
 
 template<class T>

@@ -72,6 +72,9 @@ public:
     NODISCARD reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
     NODISCARD const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
 
+    bool operator==(const Vector<T>& rightVector) const;
+    bool operator!=(const Vector<T>& rightVector) const { return !(*this == rightVector); }
+
     /*** Element Access ***/
     NODISCARD reference       at(const size_type index);                    // Random access with range check
     NODISCARD const_reference at(const size_type index) const;              // Random access with range check
@@ -359,6 +362,27 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector) noexcept(std::is_nothrow_de
     swap(moveVector);   // Steal resources of move(right) vector
 
     return *this;
+}
+
+/**
+ * @brief   Element wise comparison
+ * @param   rightVector Vector on the right side of comparison operator
+ * @return  true if vectors are equal
+ */
+template<class T>
+bool Vector<T>::operator==(const Vector<T>& rightVector) const
+{
+    if(this == &rightVector)            // Self comparison
+        return true;
+
+    if(size() != rightVector.size())    // Size must match
+        return false;
+
+    for(size_type index = 0; index < sz; ++index)
+        if(data[index] != rightVector[index])
+            return false;
+
+    return true;
 }
 
 /**

@@ -10,8 +10,7 @@
  *                             -> std::distance used for calculating the number of elements using input iterators
  *                             -> A grow(..) function added for common operations inside the container.
  *              April 15, 2021 -> noexcept specifiers added.
- *              April 16, 2021 -> Move and copy push_back(..) methods merged in a single universel reference based method.
- *                             -> Move and copy insert(..) methods merged in a single universel reference based method.
+ *              April 18, 2021 -> Perfect forwarding issue inside the emplace methods fixed.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -95,17 +94,17 @@ public:
     void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
-    template<class U>
-    void push_back(U&& value);         // Move or copy push_back
+    void push_back(const value_type& value);    // Push back by copying
+    void push_back(value_type&& value);         // Push back by moving
     void pop_back() noexcept(std::is_nothrow_destructible_v<T>);    // Remove last element
 
     template<class InputIterator>
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
+    iterator insert(iterator position, const value_type& value);                                // Single element insertion
+    iterator insert(iterator position, value_type&& value);                                     // Move insertion
     iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
-    template<class U>
-    iterator insert(iterator position, U&& value);  // Move or copy insertion
     iterator erase(iterator position);              // Single element erase
     iterator erase(iterator first, iterator last);  // Iterator based multiple erase
     void swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*>);  // Swap
@@ -497,17 +496,27 @@ void Vector<T>::assign(std::initializer_list<T> initializerList)
 
 /**
  * @brief   Adds a new element at the end of the vector, after its current last element.
- * @param   value   Value to be moved to the new element.
+ * @param   value   Value to be copied to the new element.
  */
 template<class T>
-template<class U>
-void Vector<T>::push_back(U&& value)
+void Vector<T>::push_back(const value_type& value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
         grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
 
-    // Move construct new element with the incoming
-    new(data + sz++) value_type(std::forward<U&&>(value));
+    new(data + sz) value_type(value); // Copy construct new element with the incoming one
+
+    sz++;   // Size will not be incremented in case of a previous exception
+}
+
+/**
+ * @brief   Adds a new element at the end of the vector, after its current last element.
+ * @param   value   Value to be moved to the new element.
+ */
+template<class T>
+void Vector<T>::push_back(value_type&& value)
+{
+    emplace_back(std::move(value)); // Construct element at the back by moving
 }
 
 /**
@@ -620,6 +629,52 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
 }
 
 /**
+ * @brief   Copy insertion method
+ * @param   position    Position in the vector where the new elements are inserted.
+ * @param   value       Value to be copied to the inserted element.
+ * @return  An iterator that points to the newly inserted element.
+ * @throws  std::invalid_argument   If the given position does not rely inside the container.
+ */
+template<class T>
+T* Vector<T>::insert(iterator position, const value_type& value)
+{
+    if((position < begin()) || (position > end()))
+        throw(std::invalid_argument("Position must rely inside the container!"));
+
+    if(position == end())
+    {
+        push_back(value);
+
+        return (end() - 1);     // end() may be changed
+    }
+
+    const size_type positionAsIndex = size_type(std::distance(begin(), position));
+
+    if(size() == capacity())    // Is bigger space needed?
+    {
+        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
+
+        new(data + positionAsIndex) value_type(value);
+    }
+    else
+    {
+        /* If there wasn't a reallocation, then move constructing the elements
+         * that will locate after the current size is enough. The remaining
+         * ones should only be copy assigned(right shifted). */
+        moveRangeForward(end() - 1, end(), end());
+
+        // Copy assign the remaining ones
+        assignRangeBackward(position, end() - 1, position + 1);
+
+        *(data + positionAsIndex) = value;
+    }
+
+    ++sz;   // Increment size by one
+
+    return (data + positionAsIndex);  // Data may be changed
+}
+
+/**
  * @brief   Move insertion method
  * @param   position    Position in the vector where the new elements are inserted.
  * @param   value       Value to be moved to the inserted element.
@@ -627,8 +682,7 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
 template<class T>
-template<class U>
-T* Vector<T>::insert(iterator position, U&& value)
+T* Vector<T>::insert(iterator position, value_type&& value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -646,7 +700,7 @@ T* Vector<T>::insert(iterator position, U&& value)
     {
         grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        new(data + positionAsIndex) value_type(std::forward<U&&>(value));
+        new(data + positionAsIndex) value_type(std::move(value));
     }
     else
     {
@@ -658,7 +712,7 @@ T* Vector<T>::insert(iterator position, U&& value)
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
 
-        *(data + positionAsIndex) = std::forward<U&&>(value);
+        *(data + positionAsIndex) = std::move(value);
     }
 
     ++sz;   // Increment size by one
@@ -779,7 +833,7 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     {
         grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        new(data + positionAsIndex) value_type(args...);
+        new(data + positionAsIndex) value_type(std::forward<Args>(args)...);
     }
     else
     {
@@ -791,8 +845,8 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
 
-        position->~value_type();                // Destroy old element
-        new(position) value_type(args...);      // Copy assign new element at given position
+        position->~value_type();                                // Destroy old element
+        new(position) value_type(std::forward<Args>(args)...);  // Copy assign new element at given position
     }
 
     sz++;
@@ -814,7 +868,9 @@ void Vector<T>::emplace_back(Args&&... args)
     }
 
     // Copy construct new element with the incoming one
-    new(data + sz++) value_type(args...);
+    new(data + sz) value_type(std::forward<T>(args...));
+
+    ++sz;   // Size will not be incremented in case of a previous exception
 }
 
 /**
@@ -1077,7 +1133,7 @@ void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator
 template<class T>
 void Vector<T>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
 {
-    if(newCap <= cap + gapSize)
+    if(newCap < cap + gapSize)
         throw std::invalid_argument("Cannot grow to a smaller capacity!");
 
     if(gapIndex > size())

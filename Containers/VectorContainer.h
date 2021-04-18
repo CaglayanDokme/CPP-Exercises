@@ -91,18 +91,18 @@ public:
     /*** Modifiers ***/
     template<class InputIterator>
     void assign(InputIterator first, InputIterator last);                   // Range assign
-    void assign(size_type numberOfElements, const value_type& fillValue);   // Fill assign
+    void assign(size_type numberOfElements, const_reference fillValue);   // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
-    void push_back(const value_type& value);    // Push back by copying
+    void push_back(const_reference value);    // Push back by copying
     void push_back(value_type&& value);         // Push back by moving
     void pop_back() noexcept(std::is_nothrow_destructible_v<T>);    // Remove last element
 
     template<class InputIterator>
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
-    iterator insert(iterator position, const value_type& value);                                // Single element insertion
+    iterator insert(iterator position, const_reference value);                                // Single element insertion
     iterator insert(iterator position, value_type&& value);                                     // Move insertion
-    iterator insert(iterator position, size_type numberOfElements, const value_type& value);    // Multiple insertion and fill
+    iterator insert(iterator position, size_type numberOfElements, const_reference value);    // Multiple insertion and fill
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
     iterator erase(iterator position);              // Single element erase
@@ -116,15 +116,15 @@ public:
     template <class... Args>
     void emplace_back(Args&&... args);
     void resize(const size_type newSize);  // Simple resize
-    void resize(const size_type newSize, const value_type& fillValue);  // Resize and fill
+    void resize(const size_type newSize, const_reference fillValue);  // Resize and fill
     void reserve(const size_type reservationSize);
     void shrink_to_fit();
 
     /*** Size and Capacity Checkers ***/
     NODISCARD size_type size()        const noexcept { return sz;          }
     NODISCARD size_type capacity()    const noexcept { return cap;         }
-    // size_type max_size() const { }        // TODO Search for implementation
     NODISCARD bool empty()            const noexcept { return (sz == 0);   }
+    // size_type max_size() const { }        // TODO Search for implementation
 
 private:
     /*** Members ***/
@@ -135,21 +135,21 @@ private:
     /*** Helper Functions ***/
     template<class InputIterator>
     void assignRangeForward(InputIterator from, InputIterator to, iterator destination);
-    void assignRangeForward(iterator from, iterator to, const value_type& value);
+    void assignRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>
     void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
     void moveRangeForward(InputIterator from, InputIterator to, iterator destination);
-    void moveRangeForward(iterator from, iterator to, const value_type& value);
+    void moveRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>
     void moveRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
     void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
-    void copyRangeForward(iterator from, iterator to, const value_type& value);
+    void copyRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>
     void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
@@ -208,7 +208,7 @@ Vector<T>::Vector(const size_type numberOfElements)
  * @param fillValue         Reference value for the construction of initial elements
  */
 template<class T>
-Vector<T>::Vector(const size_type numberOfElements, const value_type& fillValue)
+Vector<T>::Vector(const size_type numberOfElements, const_reference fillValue)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
@@ -458,7 +458,7 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
  * @throws  std::logic_error    If zero elements wanted to be assigned
  */
 template<class T>
-void Vector<T>::assign(size_type numberOfElements, const value_type& fillValue)
+void Vector<T>::assign(size_type numberOfElements, const_reference fillValue)
 {
     if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
     {
@@ -499,7 +499,7 @@ void Vector<T>::assign(std::initializer_list<T> initializerList)
  * @param   value   Value to be copied to the new element.
  */
 template<class T>
-void Vector<T>::push_back(const value_type& value)
+void Vector<T>::push_back(const_reference value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
         grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
@@ -591,7 +591,7 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
  * @throws  std::invalid_argument   If the number of elements to be inserted is equal to zero.
  */
 template<class T>
-T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_type& value)
+T* Vector<T>::insert(iterator position, size_type numberOfElements, const_reference value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -636,7 +636,7 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const value_
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
 template<class T>
-T* Vector<T>::insert(iterator position, const value_type& value)
+T* Vector<T>::insert(iterator position, const_reference value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -915,7 +915,7 @@ void Vector<T>::resize(const size_type newSize)
  * @param   fillValue   Value to be copied into newly added elements.
  */
 template<class T>
-void Vector<T>::resize(const size_type newSize, const value_type& fillValue)
+void Vector<T>::resize(const size_type newSize, const_reference fillValue)
 {
     if(0 == newSize)
         return clear();
@@ -1002,7 +1002,7 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
  * @param   value   Value to be copied to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::assignRangeForward(iterator from, iterator to, const value_type& value)
+void Vector<T>::assignRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
         *from = value;
@@ -1049,7 +1049,7 @@ void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   value   Value to be move assigned to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::moveRangeForward(iterator from, iterator to, const value_type& value)
+void Vector<T>::moveRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
         *from = std::move(value);
@@ -1096,7 +1096,7 @@ void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   value   Value to be copy assigned to the elements in the destination range.
  */
 template<class T>
-void Vector<T>::copyRangeForward(iterator from, iterator to, const value_type& value)
+void Vector<T>::copyRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
         new(from) value_type(value);
@@ -1127,7 +1127,7 @@ void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator
  * @param   copy        Copy the content or not
  * @param   gapIndex    Starting index of the gap if needed
  * @param   gapSize     Size of the requested gap
- * @throw   std::invalid_argument   If the requested size is smaller than potential capacity
+ * @throw   std::invalid_argument   If the requested capacity is smaller than potential capacity
  * @throw   std::invalid_argument   If the gap index is outside of the container
  */
 template<class T>

@@ -11,6 +11,7 @@
  *                             -> A grow(..) function added for common operations inside the container.
  *              April 15, 2021 -> noexcept specifiers added.
  *              April 18, 2021 -> Perfect forwarding issue inside the emplace methods fixed.
+ *              April 19, 2021 -> Allocator policy added.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -28,7 +29,7 @@
 #include <cstddef>              // std::size_t, ptrdiff_t
 #include <utility>              // std::move
 #include <ostream>              // std::cout
-#include <new>                  // ::operator new
+#include <memory>               // std::allocator, std::allocator_traits
 
 /*** Special definitions ***/
 // If the C++ version is greater or equal to 2017xx
@@ -39,7 +40,7 @@
 #endif
 
 /*** Container Class ***/
-template<class T>
+template<class T, class Allocator = std::allocator<T>>
 class Vector{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
@@ -72,8 +73,8 @@ public:
     NODISCARD reference       operator[](const size_type position)        { return data[position]; }  // Element access by lValue
     NODISCARD const_reference operator[](const size_type position) const  { return data[position]; }  // Element access by const lValue
 
-    bool operator==(const Vector<T>& rightVector) const;
-    bool operator!=(const Vector<T>& rightVector) const { return !(*this == rightVector); }
+    bool operator==(const Vector& rightVector) const;
+    bool operator!=(const Vector& rightVector) const { return !(*this == rightVector); }
 
     /*** Element Access ***/
     NODISCARD reference       at(const size_type index);                    // Random access with range check
@@ -124,16 +125,17 @@ public:
     void shrink_to_fit();
 
     /*** Size and Capacity Checkers ***/
-    NODISCARD size_type size()        const noexcept { return sz;          }
-    NODISCARD size_type capacity()    const noexcept { return cap;         }
-    NODISCARD bool empty()            const noexcept { return (sz == 0);   }
-    // size_type max_size() const { }        // TODO Search for implementation
+    NODISCARD bool empty()         const noexcept { return (sz == 0);   }
+    NODISCARD size_type size()     const noexcept { return sz;          }
+    NODISCARD size_type capacity() const noexcept { return cap;         }
+    NODISCARD size_type max_size() const noexcept { return std::allocator_traits<Allocator>::max_size(alloc); }
 
 private:
     /*** Members ***/
     size_type sz    = 0;
     size_type cap   = 0;
     T* data         = nullptr;
+    Allocator alloc;
 
     /*** Helper Functions ***/
     template<class InputIterator>
@@ -183,8 +185,8 @@ std::size_t nextPowerOf2(std::size_t N)
 /**
  * @brief Default constructor
  */
-template<class T>
-Vector<T>::Vector() noexcept
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector() noexcept
 : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
 
@@ -192,17 +194,17 @@ Vector<T>::Vector() noexcept
  * @brief Fill constructor
  * @param numberOfElements Initial size of vector
  */
-template<class T>
-Vector<T>::Vector(const size_type numberOfElements)
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector(const size_type numberOfElements)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
     // Construction will take place at each element insertion
-    data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+    data = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     // Construct the elements at predetermined locations
     for(size_type index = 0; index < sz; ++index)
-        new(data + index) value_type;
+        std::allocator_traits<Allocator>::construct(alloc, data + index);
 }
 
 /**
@@ -210,13 +212,13 @@ Vector<T>::Vector(const size_type numberOfElements)
  * @param numberOfElements  Initial size of vector
  * @param fillValue         Reference value for the construction of initial elements
  */
-template<class T>
-Vector<T>::Vector(const size_type numberOfElements, const_reference fillValue)
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector(const size_type numberOfElements, const_reference fillValue)
 : sz(numberOfElements), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
     // Construction will take place at each element insertion
-    data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+    data = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     // Copy construct the elements at predetermined locations
     copyRangeForward(begin(), begin() + numberOfElements, fillValue);
@@ -227,9 +229,9 @@ Vector<T>::Vector(const size_type numberOfElements, const_reference fillValue)
  * @param first Starting element of source
  * @param last  Last element of source(excluded)
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-Vector<T>::Vector(InputIterator first, InputIterator last)
+Vector<T, Allocator>::Vector(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
@@ -238,7 +240,7 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
 
     // Allocate space for incoming elements
     // Construction will take place at each element insertion
-    data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+    data = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     copyRangeForward(first, last, data);
 }
@@ -247,14 +249,14 @@ Vector<T>::Vector(InputIterator first, InputIterator last)
  * @brief Copy constructor
  * @param copyVector Vector to be copied from
  */
-template<class T>
-Vector<T>::Vector(const Vector& copyVector)
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector(const Vector& copyVector)
 : sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr)
 {
     // Allocate space for incoming elements
     // Construct will take place at each element insertion
     if(cap > 0)
-        data    = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        data = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     copyRangeForward(copyVector.begin(), copyVector.end(), begin());
 }
@@ -263,8 +265,8 @@ Vector<T>::Vector(const Vector& copyVector)
  * @brief Move constructor
  * @param moveVector Vector to be used for resource stealing
  */
-template<class T>
-Vector<T>::Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>)
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>)
 : sz(moveVector.size()), cap(moveVector.capacity()), data(moveVector.data)
 {
     moveVector.sz   = 0;
@@ -276,28 +278,28 @@ Vector<T>::Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>)
  * @brief Initializer List constructor
  * @param std::initializerList source list
  */
-template<class T>
-Vector<T>::Vector(std::initializer_list<value_type> initializerList)
+template<class T, class Allocator>
+Vector<T, Allocator>::Vector(std::initializer_list<value_type> initializerList)
 : sz(initializerList.size()), cap(nextPowerOf2(sz)), data(nullptr)
 {
     // Allocate space for incoming elements
     // Construct will take place at each element insertion
     if(cap > 0)
-        data = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+        data = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     const_iterator sourceIt = initializerList.begin();
 
     // Copy construct the elements at predetermined locations
     for(size_type index = 0; index < sz; ++index, ++sourceIt)
-        new(data + index) value_type(*sourceIt);
+        std::allocator_traits<Allocator>::construct(data + index, *sourceIt);
 }
 
 /**
  * @brief   Destructor
  * @note    Calls the destructors of each element individually
  */
-template<class T>
-Vector<T>::~Vector() noexcept(std::is_nothrow_destructible_v<T>)
+template<class T, class Allocator>
+Vector<T, Allocator>::~Vector() noexcept(std::is_nothrow_destructible_v<T>)
 {
     destroyRange(begin(), end());
     destroyPointer(data);
@@ -313,8 +315,8 @@ Vector<T>::~Vector() noexcept(std::is_nothrow_destructible_v<T>)
  * @return  lvalue reference to the left vector to support cascaded calls
  * @note    The elements of the left vector will be destroyed
  */
-template<class T>
-Vector<T>& Vector<T>::operator=(const Vector& copyVector)
+template<class T, class Allocator>
+Vector<T, Allocator>& Vector<T, Allocator>::operator=(const Vector& copyVector)
 {
     if(this == &copyVector) // Check self assignment
         return *this;
@@ -352,8 +354,8 @@ Vector<T>& Vector<T>::operator=(const Vector& copyVector)
  * @note    The elements of the left vector will be destroyed
  * @note    The resource of the right vector will be stolen
  */
-template<class T>
-Vector<T>& Vector<T>::operator=(Vector&& moveVector) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_swappable_v<T*>)
+template<class T, class Allocator>
+Vector<T, Allocator>& Vector<T, Allocator>::operator=(Vector&& moveVector) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_swappable_v<T*>)
 {
     if(this == &moveVector)     // Check self assignment
         return *this;
@@ -369,8 +371,8 @@ Vector<T>& Vector<T>::operator=(Vector&& moveVector) noexcept(std::is_nothrow_de
  * @param   rightVector Vector on the right side of comparison operator
  * @return  true if vectors are equal
  */
-template<class T>
-bool Vector<T>::operator==(const Vector<T>& rightVector) const
+template<class T, class Allocator>
+bool Vector<T, Allocator>::operator==(const Vector<T, Allocator>& rightVector) const
 {
     if(this == &rightVector)            // Self comparison
         return true;
@@ -391,8 +393,8 @@ bool Vector<T>::operator==(const Vector<T>& rightVector) const
  * @return  lvalue reference to the left vector to support cascaded calls
  * @note    The elements of the left vector will be destroyed
  */
-template<class T>
-Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerList)
+template<class T, class Allocator>
+Vector<T, Allocator>& Vector<T, Allocator>::operator=(std::initializer_list<value_type> initializerList)
 {
     if(initializerList.size() > capacity()) // Reallocation needed?
     {
@@ -426,8 +428,8 @@ Vector<T>& Vector<T>::operator=(std::initializer_list<value_type> initializerLis
  * @return  lvalue reference to the element at index
  * @throws  std::out_of_range if the index is bigger than the size
  */
-template<class T>
-T& Vector<T>::at(const size_type index)
+template<class T, class Allocator>
+T& Vector<T, Allocator>::at(const size_type index)
 {
     if(index < sz)
         return data[index];
@@ -441,8 +443,8 @@ T& Vector<T>::at(const size_type index)
  * @return  const lvalue reference to the element at index
  * @throws  std::out_of_range if the index is bigger than the size
  */
-template<class T>
-const T& Vector<T>::at(const size_type index) const
+template<class T, class Allocator>
+const T& Vector<T, Allocator>::at(const size_type index) const
 {
     if(index < sz)
         return data[index];
@@ -455,9 +457,9 @@ const T& Vector<T>::at(const size_type index) const
  * @param   first   Source start point
  * @param   last    Source end point
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::assign(InputIterator first, InputIterator last)
+void Vector<T, Allocator>::assign(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
@@ -481,8 +483,8 @@ void Vector<T>::assign(InputIterator first, InputIterator last)
  * @param   fillValue           Assignment value
  * @throws  std::logic_error    If zero elements wanted to be assigned
  */
-template<class T>
-void Vector<T>::assign(size_type numberOfElements, const_reference fillValue)
+template<class T, class Allocator>
+void Vector<T, Allocator>::assign(size_type numberOfElements, const_reference fillValue)
 {
     if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
     {
@@ -501,8 +503,8 @@ void Vector<T>::assign(size_type numberOfElements, const_reference fillValue)
  * @brief Initializer list assignment
  * @param initializerList   Source list
  */
-template<class T>
-void Vector<T>::assign(std::initializer_list<T> initializerList)
+template<class T, class Allocator>
+void Vector<T, Allocator>::assign(std::initializer_list<T> initializerList)
 {
     if(initializerList.size() > capacity())  // Is a bigger space needed?
     {
@@ -522,8 +524,8 @@ void Vector<T>::assign(std::initializer_list<T> initializerList)
  * @brief   Adds a new element at the end of the vector, after its current last element.
  * @param   value   Value to be copied to the new element.
  */
-template<class T>
-void Vector<T>::push_back(const_reference value)
+template<class T, class Allocator>
+void Vector<T, Allocator>::push_back(const_reference value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
         grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
@@ -537,8 +539,8 @@ void Vector<T>::push_back(const_reference value)
  * @brief   Adds a new element at the end of the vector, after its current last element.
  * @param   value   Value to be moved to the new element.
  */
-template<class T>
-void Vector<T>::push_back(value_type&& value)
+template<class T, class Allocator>
+void Vector<T, Allocator>::push_back(value_type&& value)
 {
     emplace_back(std::move(value)); // Construct element at the back by moving
 }
@@ -546,8 +548,8 @@ void Vector<T>::push_back(value_type&& value)
 /**
  * @brief   Removes the last element in the vector by destroying it.
  */
-template<class T>
-void Vector<T>::pop_back() noexcept(std::is_nothrow_destructible_v<T>)
+template<class T, class Allocator>
+void Vector<T, Allocator>::pop_back() noexcept(std::is_nothrow_destructible_v<T>)
 {
     if(size() > 0)
     {
@@ -565,9 +567,9 @@ void Vector<T>::pop_back() noexcept(std::is_nothrow_destructible_v<T>)
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  * @throws  std::logic_error        If the iterators are in a wrong order
  */
-template<class T>
+template<class T, class Allocator>
 template <class InputIterator>
-T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
+T* Vector<T, Allocator>::insert(iterator position, InputIterator first, InputIterator last)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -614,8 +616,8 @@ T* Vector<T>::insert(iterator position, InputIterator first, InputIterator last)
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  * @throws  std::invalid_argument   If the number of elements to be inserted is equal to zero.
  */
-template<class T>
-T* Vector<T>::insert(iterator position, size_type numberOfElements, const_reference value)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::insert(iterator position, size_type numberOfElements, const_reference value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -659,8 +661,8 @@ T* Vector<T>::insert(iterator position, size_type numberOfElements, const_refere
  * @return  An iterator that points to the newly inserted element.
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
-template<class T>
-T* Vector<T>::insert(iterator position, const_reference value)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::insert(iterator position, const_reference value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -705,8 +707,8 @@ T* Vector<T>::insert(iterator position, const_reference value)
  * @return  An iterator that points to the newly inserted element.
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
-template<class T>
-T* Vector<T>::insert(iterator position, value_type&& value)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::insert(iterator position, value_type&& value)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -751,8 +753,8 @@ T* Vector<T>::insert(iterator position, value_type&& value)
  * @return  An iterator that points to the newly inserted element.
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
-template<class T>
-T* Vector<T>::insert(iterator position, std::initializer_list<value_type> initializerList)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::insert(iterator position, std::initializer_list<value_type> initializerList)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -766,8 +768,8 @@ T* Vector<T>::insert(iterator position, std::initializer_list<value_type> initia
  * @return  An iterator pointing to the element that follows the erased element.
  * @throws  std::invalid_argument   If the given position does not rely inside the container.
  */
-template<class T>
-T* Vector<T>::erase(iterator position)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::erase(iterator position)
 {
     if((position < begin()) || (position >= end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -794,8 +796,8 @@ T* Vector<T>::erase(iterator position)
  * @throws  std::invalid_argument   If the given positions does not rely inside the container.
  * @throws  std::invalid_argument   If the given positions doesn't have valid order.
  */
-template<class T>
-T* Vector<T>::erase(iterator first, iterator last)
+template<class T, class Allocator>
+T* Vector<T, Allocator>::erase(iterator first, iterator last)
 {
     if((first < begin()) || (last > end()))
         throw(std::invalid_argument("Iterators must rely inside the container!"));
@@ -816,8 +818,8 @@ T* Vector<T>::erase(iterator first, iterator last)
  * @brief   Swaps the contents of two vectors
  * @param   swapVector  Vector to be swapped with
  */
-template<class T>
-void Vector<T>::swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*>)
+template<class T, class Allocator>
+void Vector<T, Allocator>::swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*>)
 {
     if(this == &swapVector) // Check self swap
         return;
@@ -844,9 +846,9 @@ void Vector<T>::swap(Vector& swapVector) noexcept(std::is_nothrow_swappable_v<T*
  * @param   args        Arguments to be used when constructing the new element
  * @return  An iterator that points to the newly inserted element.
  */
-template<class T>
+template<class T, class Allocator>
 template <class... Args>
-T* Vector<T>::emplace(iterator position, Args&&... args)
+T* Vector<T, Allocator>::emplace(iterator position, Args&&... args)
 {
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
@@ -857,7 +859,7 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
     {
         grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
 
-        new(data + positionAsIndex) value_type(std::forward<Args>(args)...);
+        std::allocator_traits<Allocator>::construct(alloc, data + positionAsIndex, std::forward<Args>(args)...);
     }
     else
     {
@@ -869,8 +871,10 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
         // Copy assign the remaining ones
         assignRangeBackward(position, end() - 1, position + 1);
 
-        position->~value_type();                                // Destroy old element
-        new(position) value_type(std::forward<Args>(args)...);  // Copy assign new element at given position
+        std::allocator_traits<Allocator>::destroy(alloc, position); // Destroy old element
+
+        // Construct new element with the given arguments
+        std::allocator_traits<Allocator>::construct(alloc, position, std::forward<Args>(args)...);
     }
 
     sz++;
@@ -882,9 +886,9 @@ T* Vector<T>::emplace(iterator position, Args&&... args)
  * @brief   Constructs and inserts element at the end of the container.
  * @param   args    Arguments to be used when constructing the new element
  */
-template<class T>
+template<class T, class Allocator>
 template <class... Args>
-void Vector<T>::emplace_back(Args&&... args)
+void Vector<T, Allocator>::emplace_back(Args&&... args)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
@@ -892,7 +896,7 @@ void Vector<T>::emplace_back(Args&&... args)
     }
 
     // Copy construct new element with the incoming one
-    new(data + sz) value_type(std::forward<T>(args...));
+    std::allocator_traits<Allocator>::construct(alloc, data + sz, std::forward<Args>(args)...);
 
     ++sz;   // Size will not be incremented in case of a previous exception
 }
@@ -901,8 +905,8 @@ void Vector<T>::emplace_back(Args&&... args)
  * @brief   Resizes the container so that it contains given number of elements.
  * @param   newSize Requested size.
  */
-template<class T>
-void Vector<T>::resize(const size_type newSize)
+template<class T, class Allocator>
+void Vector<T, Allocator>::resize(const size_type newSize)
 {
     if(0 == newSize)
         return clear();
@@ -919,14 +923,14 @@ void Vector<T>::resize(const size_type newSize)
         if(newSize < capacity())
         {
             for(size_type index = size(); index < newSize; ++index)
-                new(data + index) value_type;   // Default construct new elements
+                std::allocator_traits<Allocator>::construct(alloc, data + index);
         }
         else    // Reallocation needed
         {
             grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
 
             for(size_type index = size(); index < newSize; ++index)
-                new(data + index) value_type;   // Default construct new elements
+                std::allocator_traits<Allocator>::construct(alloc, data + index);
         }
     }
 
@@ -938,8 +942,8 @@ void Vector<T>::resize(const size_type newSize)
  * @param   newSize     Requested size.
  * @param   fillValue   Value to be copied into newly added elements.
  */
-template<class T>
-void Vector<T>::resize(const size_type newSize, const_reference fillValue)
+template<class T, class Allocator>
+void Vector<T, Allocator>::resize(const size_type newSize, const_reference fillValue)
 {
     if(0 == newSize)
         return clear();
@@ -956,14 +960,14 @@ void Vector<T>::resize(const size_type newSize, const_reference fillValue)
         if(newSize < capacity())
         {
             for(size_type index = size(); index < newSize; ++index)
-                new(data + index) value_type(fillValue);   // Copy construct new elements
+                std::allocator_traits<Allocator>::construct(alloc, data + index, fillValue);
         }
         else    // Reallocation needed
         {
             grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
 
             for(size_type index = size(); index < newSize; ++index)
-                new(data + index) value_type(fillValue);   // Copy construct new elements
+                std::allocator_traits<Allocator>::construct(alloc, data + index, fillValue);
         }
     }
 
@@ -974,8 +978,8 @@ void Vector<T>::resize(const size_type newSize, const_reference fillValue)
  * @brief   Requests that the vector capacity be at least enough to contain requested number of elements.
  * @param   reservationSize     Minimum capacity for the vector.
  */
-template<class T>
-void Vector<T>::reserve(const size_type reservationSize)
+template<class T, class Allocator>
+void Vector<T, Allocator>::reserve(const size_type reservationSize)
 {
     if(reservationSize <= capacity())
         return;
@@ -987,14 +991,14 @@ void Vector<T>::reserve(const size_type reservationSize)
  * @brief   Requests the container to reduce its capacity to fit its size
  * @note    Caueses reallocation if the current size is not equal to the current capacity.
  */
-template<class T>
-void Vector<T>::shrink_to_fit()
+template<class T, class Allocator>
+void Vector<T, Allocator>::shrink_to_fit()
 {
     if(size() == capacity())
         return;
 
     cap = size();
-    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+    value_type* newData = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     copyRangeForward(begin(), end(), newData);
 
@@ -1011,9 +1015,9 @@ void Vector<T>::shrink_to_fit()
  * @param   destination     Starting point of destination range
  * @note    Do not use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::assignRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
         *destination = *from;
@@ -1025,8 +1029,8 @@ void Vector<T>::assignRangeForward(InputIterator from, InputIterator to, iterato
  * @param   to      Ending point of destination range(excluded)
  * @param   value   Value to be copied to the elements in the destination range.
  */
-template<class T>
-void Vector<T>::assignRangeForward(iterator from, iterator to, const_reference value)
+template<class T, class Allocator>
+void Vector<T, Allocator>::assignRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
         *from = value;
@@ -1039,9 +1043,9 @@ void Vector<T>::assignRangeForward(iterator from, iterator to, const_reference v
  * @param   destination     Starting point of destination range
  * @note    Use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::assignRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward assigning will help to prevent corruption of data
      * when two ranges overlap each other. */
@@ -1058,12 +1062,12 @@ void Vector<T>::assignRangeBackward(InputIterator from, InputIterator to, iterat
  * @param   destination     Starting point of destination range
  * @note    Do not use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::moveRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
-        new(destination) value_type(std::move(*from));
+        std::allocator_traits<Allocator>::construct(alloc, destination, std::move(*from));
 }
 
 /**
@@ -1072,8 +1076,8 @@ void Vector<T>::moveRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   to      Ending point of destination range(excluded)
  * @param   value   Value to be move assigned to the elements in the destination range.
  */
-template<class T>
-void Vector<T>::moveRangeForward(iterator from, iterator to, const_reference value)
+template<class T, class Allocator>
+void Vector<T, Allocator>::moveRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
         *from = std::move(value);
@@ -1086,16 +1090,16 @@ void Vector<T>::moveRangeForward(iterator from, iterator to, const_reference val
  * @param   destination     Starting point of destination range
  * @note    Use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward copying will help to prevent corruption of data
      * when two ranges overlap each other. */
     destination += to - from - 1;   // Start from the last
 
     for( ; to != from; --to, --destination)
-        new(destination) value_type(std::move(*(to - 1)));
+        std::allocator_traits<Allocator>::construct(alloc, destination, std::move(*(to - 1)));
 }
 
 /**
@@ -1105,12 +1109,12 @@ void Vector<T>::moveRangeBackward(InputIterator from, InputIterator to, iterator
  * @param   destination     Starting point of destination range
  * @note    Do not use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::copyRangeForward(InputIterator from, InputIterator to, iterator destination)
 {
     for( ; from != to; ++from, ++destination)
-        new(destination) value_type(*from);
+        std::allocator_traits<Allocator>::construct(alloc, destination, *from);
 }
 
 /**
@@ -1119,11 +1123,11 @@ void Vector<T>::copyRangeForward(InputIterator from, InputIterator to, iterator 
  * @param   to      Ending point of destination range(excluded)
  * @param   value   Value to be copy assigned to the elements in the destination range.
  */
-template<class T>
-void Vector<T>::copyRangeForward(iterator from, iterator to, const_reference value)
+template<class T, class Allocator>
+void Vector<T, Allocator>::copyRangeForward(iterator from, iterator to, const_reference value)
 {
     for( ; from != to; ++from)
-        new(from) value_type(value);
+        std::allocator_traits<Allocator>::construct(alloc, from, value);
 }
 
 /**
@@ -1133,16 +1137,16 @@ void Vector<T>::copyRangeForward(iterator from, iterator to, const_reference val
  * @param   destination     Starting point of destination range
  * @note    Use if the ranges overlaps each other
  */
-template<class T>
+template<class T, class Allocator>
 template<class InputIterator>
-void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination)
+void Vector<T, Allocator>::copyRangeBackward(InputIterator from, InputIterator to, iterator destination)
 {
     /* Backward copying will help to prevent corruption of data
      * when two ranges overlap each other. */
     destination += to - from - 1;   // Start from the last
 
     for( ; to != from; --to, --destination)
-        new(destination) value_type(*(to - 1));
+        std::allocator_traits<Allocator>::construct(alloc, destination, *(to - 1));
 }
 
 /**
@@ -1154,8 +1158,8 @@ void Vector<T>::copyRangeBackward(InputIterator from, InputIterator to, iterator
  * @throw   std::invalid_argument   If the requested capacity is smaller than potential capacity
  * @throw   std::invalid_argument   If the gap index is outside of the container
  */
-template<class T>
-void Vector<T>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
+template<class T, class Allocator>
+void Vector<T, Allocator>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
 {
     if(newCap < cap + gapSize)
         throw std::invalid_argument("Cannot grow to a smaller capacity!");
@@ -1165,7 +1169,7 @@ void Vector<T>::grow(size_type newCap, bool copy, size_type gapIndex, size_type 
 
     // Allocate new space
     cap = newCap;
-    value_type* newData = static_cast<value_type*>(::operator new(sizeof(value_type) * cap));
+    value_type* newData = std::allocator_traits<Allocator>::allocate(alloc, cap);
 
     if(true == copy)    // If copying the old items is needed
     {
@@ -1186,26 +1190,26 @@ void Vector<T>::grow(size_type newCap, bool copy, size_type gapIndex, size_type 
     data = newData;
 }
 
-template<class T>
-void Vector<T>::destroyRange(iterator from, iterator to)
+template<class T, class Allocator>
+void Vector<T, Allocator>::destroyRange(iterator from, iterator to)
 {
     /* The operator delete[] wouldn't work appropriately as we
      * used the placement new operator and constructed each element
      * at the time of the insertion*/
     for( ; from != to; ++from)
-        from->~value_type();    // Explicitly call the destructor
+        std::allocator_traits<Allocator>::destroy(alloc, from);
 }
 
-template<class T>
-void Vector<T>::destroyPointer(iterator ptr)
+template<class T, class Allocator>
+void Vector<T, Allocator>::destroyPointer(iterator ptr)
 {
     /* The allocated space will not be used anymore.
      * We shall release the resource for further usage */
-    ::operator delete(static_cast<void*>(ptr));
+    std::allocator_traits<Allocator>::deallocate(alloc, ptr, sz);
 }
 
-template<class T>
-std::ostream& operator<<(std::ostream& stream, const Vector<T>& vector)
+template<class T, class Allocator>
+std::ostream& operator<<(std::ostream& stream, const Vector<T, Allocator>& vector)
 {
     for(const T& element : vector)
         stream << element << " ";

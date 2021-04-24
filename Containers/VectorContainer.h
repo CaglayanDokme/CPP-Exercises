@@ -13,6 +13,7 @@
  *              April 18, 2021 -> Perfect forwarding issue inside the emplace methods fixed.
  *              April 19, 2021 -> Allocator policy added.
  *              April 22, 2021 -> Allocator object arguments added to constructors.
+ *              April 24, 2021 -> Memory leakeages caused by exceptions during container construction prevented.
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -113,15 +114,15 @@ public:
     void assign(size_type numberOfElements, const_reference fillValue);   // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
-    void push_back(const_reference value);    // Push back by copying
+    void push_back(const_reference value);      // Push back by copying
     void push_back(value_type&& value);         // Push back by moving
     void pop_back() noexcept(std::is_nothrow_destructible_v<T>);    // Remove last element
 
     template<class InputIterator>
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
-    iterator insert(iterator position, const_reference value);                                // Single element insertion
+    iterator insert(iterator position, const_reference value);                                  // Single element insertion
     iterator insert(iterator position, value_type&& value);                                     // Move insertion
-    iterator insert(iterator position, size_type numberOfElements, const_reference value);    // Multiple insertion and fill
+    iterator insert(iterator position, size_type numberOfElements, const_reference value);      // Multiple insertion and fill
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
     iterator erase(iterator position);              // Single element erase
@@ -223,15 +224,24 @@ Vector<T, Allocator>::Vector(const allocator_type& alloc)
  */
 template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const size_type numOfElements, const allocator_type& alloc)
-: sz(numOfElements), cap(nextPowerOf2(sz)), data(nullptr), allocator(alloc)
+: sz(0), cap(nextPowerOf2(numOfElements)), data(nullptr), allocator(alloc)
 {
-    // Allocate space for incoming elements
-    // Construction will take place at each element insertion
-    data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
 
-    // Construct the elements at predetermined locations
-    for(size_type index = 0; index < sz; ++index)
-        std::allocator_traits<Allocator>::construct(allocator, data + index);
+        // Construct the elements at predetermined locations
+        for(; sz < numOfElements; ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz);
+    }
+    catch(...)
+    {
+        this->~Vector();
+
+        throw;
+    }
 }
 
 /**
@@ -243,14 +253,24 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const allocator_type
  */
 template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const size_type numOfElements, const_reference fillValue, const allocator_type& alloc)
-: sz(numOfElements), cap(nextPowerOf2(sz)), data(nullptr), allocator(alloc)
+: sz(0), cap(nextPowerOf2(sz)), data(nullptr), allocator(alloc)
 {
-    // Allocate space for incoming elements
-    // Construction will take place at each element insertion
-    data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
 
-    // Copy construct the elements at predetermined locations
-    copyRangeForward(begin(), begin() + numOfElements, fillValue);
+        // Construct the elements at predetermined locations
+        for(; sz < numOfElements; ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz, fillValue);
+    }
+    catch(...)
+    {
+        this->~Vector();
+
+        throw;
+    }
 }
 
 /**
@@ -263,18 +283,29 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const_reference fill
 template<class T, class Allocator>
 template<class InputIterator>
 Vector<T, Allocator>::Vector(InputIterator first, InputIterator last, const allocator_type& alloc)
-: allocator(alloc)
+: sz(0), data(nullptr), allocator(alloc)
 {
-    const difference_type numberOfElements = std::distance(first, last);
+    const difference_type numOfElements = std::distance(first, last);
 
-    sz      = numberOfElements;
-    cap     = nextPowerOf2(sz);
-
-    // Allocate space for incoming elements
-    // Construction will take place at each element insertion
-    data = std::allocator_traits<Allocator>::allocate(allocator, cap);
-
+    cap     = nextPowerOf2(numOfElements);
     copyRangeForward(first, last, data);
+
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+
+        // Copy construct the elements at predetermined locations
+        for(; sz < numOfElements; ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz, *(first + sz));
+    }
+    catch(...)
+    {
+        this->~Vector();
+
+        throw;
+    }
 }
 
 /**
@@ -283,14 +314,25 @@ Vector<T, Allocator>::Vector(InputIterator first, InputIterator last, const allo
  */
 template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const Vector& copyVector)
-: sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr), allocator(copyVector.allocator)
+: sz(0), cap(copyVector.capacity()), data(nullptr), allocator(copyVector.allocator)
 {
-    // Allocate space for incoming elements
-    // Construct will take place at each element insertion
-    if(cap > 0)
-        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        if(cap > 0)
+            data = std::allocator_traits<Allocator>::allocate(allocator, cap);
 
-    copyRangeForward(copyVector.begin(), copyVector.end(), begin());
+        // Copy construct the elements at predetermined locations
+        for(; sz < copyVector.size(); ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
+    }
+    catch(...)
+    {
+        this->~Vector();
+
+        throw;
+    }
 }
 
 
@@ -302,14 +344,25 @@ Vector<T, Allocator>::Vector(const Vector& copyVector)
  */
 template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const Vector& copyVector, const allocator_type& alloc)
-: sz(copyVector.size()), cap(copyVector.capacity()), data(nullptr), allocator(alloc)
+: sz(0), cap(copyVector.capacity()), data(nullptr), allocator(alloc)
 {
-    // Allocate space for incoming elements
-    // Construct will take place at each element insertion
-    if(cap > 0)
-        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        if(cap > 0)
+            data = std::allocator_traits<Allocator>::allocate(allocator, cap);
 
-    copyRangeForward(copyVector.begin(), copyVector.end(), begin());
+        // Copy construct the elements at predetermined locations
+        for(; sz < copyVector.size(); ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
+    }
+    catch(...)
+    {
+        this->~Vector();
+
+        throw;
+    }
 }
 
 /**
@@ -348,18 +401,25 @@ Vector<T, Allocator>::Vector(Vector&& moveVector, const allocator_type& alloc) n
  */
 template<class T, class Allocator>
 Vector<T, Allocator>::Vector(std::initializer_list<value_type> initializerList, const allocator_type& alloc)
-: sz(initializerList.size()), cap(nextPowerOf2(sz)), data(nullptr), allocator(alloc)
+: sz(0), cap(nextPowerOf2(initializerList.size())), data(nullptr), allocator(alloc)
 {
-    // Allocate space for incoming elements
-    // Construct will take place at each element insertion
-    if(cap > 0)
-        data = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    try
+    {
+        // Allocate space for incoming elements
+        // Construction will take place at each element insertion
+        if(cap > 0)
+            data = std::allocator_traits<Allocator>::allocate(allocator, cap);
 
-    const_iterator sourceIt = initializerList.begin();
+        // Copy construct the elements at predetermined locations
+        for(; sz < initializerList.size(); ++sz)
+            std::allocator_traits<Allocator>::construct(allocator, data + sz, *(initializerList.begin() + sz));
+    }
+    catch(...)
+    {
+        this->~Vector();
 
-    // Copy construct the elements at predetermined locations
-    for(size_type index = 0; index < sz; ++index, ++sourceIt)
-        std::allocator_traits<Allocator>::construct(data + index, *sourceIt);
+        throw;
+    }
 }
 
 /**

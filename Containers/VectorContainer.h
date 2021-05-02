@@ -14,6 +14,9 @@
  *              April 19, 2021 -> Allocator policy added.
  *              April 22, 2021 -> Allocator object arguments added to constructors.
  *              April 24, 2021 -> Memory leakeages caused by exceptions during container construction prevented.
+ *              May 2, 2021    -> Vulnerability against exceptions caused by modifier functions fixed.
+ *                             -> get_allocator() function added
+ *
  *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
@@ -111,7 +114,7 @@ public:
     /*** Modifiers ***/
     template<class InputIterator>
     void assign(InputIterator first, InputIterator last);                   // Range assign
-    void assign(size_type numberOfElements, const_reference fillValue);   // Fill assign
+    void assign(size_type numberOfElements, const_reference fillValue);     // Fill assign
     void assign(std::initializer_list<value_type> initializerList);         // Initializer list assign
 
     void push_back(const_reference value);      // Push back by copying
@@ -120,9 +123,9 @@ public:
 
     template<class InputIterator>
     iterator insert(iterator position, InputIterator first, InputIterator last);                // Range insertion
+    iterator insert(iterator position, size_type numberOfElements, const_reference value);      // Multiple insertion and fill
     iterator insert(iterator position, const_reference value);                                  // Single element insertion
     iterator insert(iterator position, value_type&& value);                                     // Move insertion
-    iterator insert(iterator position, size_type numberOfElements, const_reference value);      // Multiple insertion and fill
     iterator insert(iterator position, std::initializer_list<value_type> il);                   // Initializer list insertion
 
     iterator erase(iterator position);              // Single element erase
@@ -145,6 +148,9 @@ public:
     NODISCARD size_type size()     const noexcept { return sz;          }
     NODISCARD size_type capacity() const noexcept { return cap;         }
     NODISCARD size_type max_size() const noexcept { return std::allocator_traits<Allocator>::max_size(allocator); }
+
+    /** Allocator **/
+    NODISCARD allocator_type get_allocator() const noexcept { return  allocator; }
 
 private:
     /*** Members ***/
@@ -175,7 +181,7 @@ private:
     template<class InputIterator>
     void copyRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
-    void grow(size_type newCap, bool copy = false, size_type gapIndex = 0, size_type gapSize = 0);
+    NODISCARD T* grow(size_type newCap, bool copy = false, size_type gapIndex = 0, size_type gapSize = 0);
 
     void destroyRange(iterator from, iterator to);
     void destroyPointer(iterator ptr);
@@ -226,8 +232,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const size_type numOfElements, const allocator_type& alloc)
 : sz(0), cap(nextPowerOf2(numOfElements)), data(nullptr), allocator(alloc)
 {
-    try
-    {
+    try{
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         data = std::allocator_traits<Allocator>::allocate(allocator, cap);
@@ -235,9 +240,7 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const allocator_type
         // Construct the elements at predetermined locations
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz);
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -255,8 +258,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const size_type numOfElements, const_reference fillValue, const allocator_type& alloc)
 : sz(0), cap(nextPowerOf2(sz)), data(nullptr), allocator(alloc)
 {
-    try
-    {
+    try{
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         data = std::allocator_traits<Allocator>::allocate(allocator, cap);
@@ -264,9 +266,7 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const_reference fill
         // Construct the elements at predetermined locations
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, fillValue);
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -290,8 +290,7 @@ Vector<T, Allocator>::Vector(InputIterator first, InputIterator last, const allo
     cap     = nextPowerOf2(numOfElements);
     copyRangeForward(first, last, data);
 
-    try
-    {
+    try{
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         data = std::allocator_traits<Allocator>::allocate(allocator, cap);
@@ -299,9 +298,7 @@ Vector<T, Allocator>::Vector(InputIterator first, InputIterator last, const allo
         // Copy construct the elements at predetermined locations
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, *(first + sz));
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -316,8 +313,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const Vector& copyVector)
 : sz(0), cap(copyVector.capacity()), data(nullptr), allocator(copyVector.allocator)
 {
-    try
-    {
+    try{
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         if(cap > 0)
@@ -326,9 +322,7 @@ Vector<T, Allocator>::Vector(const Vector& copyVector)
         // Copy construct the elements at predetermined locations
         for(; sz < copyVector.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -346,8 +340,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const Vector& copyVector, const allocator_type& alloc)
 : sz(0), cap(copyVector.capacity()), data(nullptr), allocator(alloc)
 {
-    try
-    {
+    try {
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         if(cap > 0)
@@ -356,9 +349,7 @@ Vector<T, Allocator>::Vector(const Vector& copyVector, const allocator_type& all
         // Copy construct the elements at predetermined locations
         for(; sz < copyVector.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -403,8 +394,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector(std::initializer_list<value_type> initializerList, const allocator_type& alloc)
 : sz(0), cap(nextPowerOf2(initializerList.size())), data(nullptr), allocator(alloc)
 {
-    try
-    {
+    try{
         // Allocate space for incoming elements
         // Construction will take place at each element insertion
         if(cap > 0)
@@ -413,9 +403,7 @@ Vector<T, Allocator>::Vector(std::initializer_list<value_type> initializerList, 
         // Copy construct the elements at predetermined locations
         for(; sz < initializerList.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, *(initializerList.begin() + sz));
-    }
-    catch(...)
-    {
+    }catch(...){
         this->~Vector();
 
         throw;
@@ -591,16 +579,50 @@ void Vector<T, Allocator>::assign(InputIterator first, InputIterator last)
 {
     const difference_type numberOfElements = std::distance(first, last);
 
-    if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
-    {
-        grow(nextPowerOf2(numberOfElements));   // Grow and destroy current elements
-    }
-    else
-    {
-        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
-    }
+    size_type copied = 0;
 
-    copyRangeForward(first, last, data);
+    if(numberOfElements > capacity())  // Is a bigger space needed?
+    {
+        value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(numberOfElements));;   // Grow
+
+        try {
+            // Copy construct assigned elements
+            for( ; (copied < numberOfElements) && (first != last); ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(first++));
+        }catch(...){
+            // Destruct constructed elements
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate exception
+        }
+
+        // Destroy previous elements and resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
+
+        data    = newData;
+        cap     = nextPowerOf2(numberOfElements);
+    }
+    else    // Reallocation not needed
+    {
+        try {
+            // Copy assign to places that are already in use
+            for( ; (copied < size()) && (copied < numberOfElements); ++copied)
+                *(data + copied) = *(first++);
+
+            // Copy construct assigned elements
+            for( ; copied < numberOfElements; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, data + copied, *(first++));
+        }catch(...){
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
+
+            throw;  // Propagate exception
+        }
+    }
 
     sz = numberOfElements;  // Determine new size
 }
@@ -614,17 +636,52 @@ void Vector<T, Allocator>::assign(InputIterator first, InputIterator last)
 template<class T, class Allocator>
 void Vector<T, Allocator>::assign(size_type numberOfElements, const_reference fillValue)
 {
-    if(size_type(numberOfElements) > capacity())  // Is a bigger space needed?
+    size_type copied = 0;
+
+    if(numberOfElements > capacity())  // Is a bigger space needed?
     {
-        grow(nextPowerOf2(numberOfElements));   // Grow and destroy current elements
+        value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(numberOfElements));;   // Grow
+
+        try {
+            // Copy construct assigned elements
+            for( ; copied < numberOfElements; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied, fillValue);
+        }catch(...){
+            // Destruct constructed elements
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate exception
+        }
+
+        // Destroy previous elements and resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
+
+        data    = newData;
+        cap     = nextPowerOf2(numberOfElements);
     }
-    else
+    else    // Reallocation not needed
     {
-        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
+        try {
+            // Copy assign to places that are already in use
+            for( ; (copied < size()) && (copied < numberOfElements); ++copied)
+                *(data + copied) = fillValue;
+
+            // Copy construct assigned elements
+            for( ; copied < numberOfElements; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, data + copied, fillValue);
+        }catch(...){
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
+
+            throw;  // Propagate exception
+        }
     }
 
-    copyRangeForward(begin(), begin() + numberOfElements, fillValue);
-    sz = numberOfElements;
+    sz = numberOfElements;  // Determine new size
 }
 
 /**
@@ -634,16 +691,50 @@ void Vector<T, Allocator>::assign(size_type numberOfElements, const_reference fi
 template<class T, class Allocator>
 void Vector<T, Allocator>::assign(std::initializer_list<T> initializerList)
 {
+    size_type copied = 0;
+
     if(initializerList.size() > capacity())  // Is a bigger space needed?
     {
-        grow(nextPowerOf2(initializerList.size()));   // Grow and destroy current elements
-    }
-    else
-    {
-        destroyRange(begin(), end());   // Destroy elements, preserve allocated space
-    }
+        value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(initializerList.size()));;   // Grow
 
-    copyRangeForward(initializerList.begin(), initializerList.end(), begin());
+        try {
+            // Copy construct assigned elements
+            for( ; copied < initializerList.size(); ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(initializerList.begin() + copied));
+        }catch(...){
+            // Destruct constructed elements
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate exception
+        }
+
+        // Destroy previous elements and resource
+        destroyRange(begin(), end());
+        destroyPointer(data);
+
+        data    = newData;
+        cap     = nextPowerOf2(initializerList.size());
+    }
+    else    // Reallocation not needed
+    {
+        try {
+            // Copy assign to places that are already in use
+            for( ; (copied < size()) && (copied < initializerList.size()); ++copied)
+                *(data + copied) = *(initializerList.begin() + copied);
+
+            // Copy construct assigned elements
+            for( ; copied < initializerList.size(); ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, data + copied, *(initializerList.begin() + copied));
+        }catch(...){
+            for( ; copied > 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
+
+            throw;  // Propagate exception
+        }
+    }
 
     sz = initializerList.size();  // Determine new size
 }
@@ -656,9 +747,19 @@ template<class T, class Allocator>
 void Vector<T, Allocator>::push_back(const_reference value)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
-        grow(nextPowerOf2(capacity()), true);   // Grow and copy the old content
+    {
+        value_type* newData = grow(nextPowerOf2(cap), true);   // Grow and copy the current content
 
-    new(data + sz) value_type(value); // Copy construct new element with the incoming one
+        // Destroy old content
+        destroyRange(begin(), end());
+        destroyPointer(data);
+
+        data    = newData;
+        cap     = nextPowerOf2(cap);
+    }
+
+    // Copy construct new element with the incoming one
+    std::allocator_traits<Allocator>::construct(allocator, data + sz, value);
 
     sz++;   // Size will not be incremented in case of a previous exception
 }
@@ -682,7 +783,7 @@ void Vector<T, Allocator>::pop_back() noexcept(std::is_nothrow_destructible_v<T>
     if(size() > 0)
     {
         --sz;
-        (data + sz)->~value_type(); // Destroy popped element
+        std::allocator_traits<Allocator>::destroy(allocator, data + sz);    // Destroy popped element
     }
 }
 
@@ -705,34 +806,87 @@ T* Vector<T, Allocator>::insert(iterator position, InputIterator first, InputIte
     const difference_type numberOfElements    = std::distance(first, last);
     const difference_type positionAsIndex     = std::distance(begin(), position);
 
-    if(numberOfElements <= 0)
-        throw(std::logic_error("Wrong iterator sequence!"));
-
     if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
-        /* If there will be reallocations for multiple times,
-         * we better reallocate for the final size in a single operation
-         * to enhance optimization of insertion. */
-        grow(nextPowerOf2(size() + numberOfElements), true, positionAsIndex, numberOfElements);
+        value_type* newData = nullptr;
+        size_type copied = 0, constructed = 0;
 
-        copyRangeForward(first, last, data + positionAsIndex);  // Copy construct new elements at given position
+        // Reallocation and construction of the new element
+        newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(size() + numberOfElements));
+
+        try{
+            // Construct the new elements
+            for( ; (constructed < numberOfElements) && (first != last); ++constructed)
+                std::allocator_traits<Allocator>::construct(allocator, newData + positionAsIndex + constructed, *(first++));
+
+            // Copy the elements on the left side of the requested position
+            for( ; copied < positionAsIndex; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(data + copied));
+
+            // Copy the elements on the right side of the requested position
+            for( ; copied < sz; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied + numberOfElements, *(data + copied));
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            // Replace data pointer and capacity
+            data    = newData;
+            cap     = nextPowerOf2(size() + numberOfElements);
+            sz      += numberOfElements;
+        }catch(...){
+            // Destruct the new elements
+            for( ; constructed > 0; --constructed)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + positionAsIndex + constructed - 1);
+
+            // Destruct items copied to the right side of the requested position
+            for( ; copied > positionAsIndex; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied + numberOfElements - 1);
+
+            // Destruct items copied to the left side of the requested position
+            for( ; copied != 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate the exception
+        }
     }
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
-         * ones should only be copy assigned(right shifted). */
-        moveRangeForward(end() - numberOfElements, end(), end());
+         * ones should only be copy assigned(right shifted). The area located
+         * after the current size is a raw space. */
+        if(numberOfElements <= (size() - positionAsIndex))
+        {
+            moveRangeForward(end() - numberOfElements, end(), end());
 
-        // Copy assign the remaining ones
-        assignRangeBackward(position, end() - numberOfElements, position + numberOfElements);
+            /* Moving the element outside of the current size increments the size by one.
+             * Size should be incremented before assignment process as it is vulnerable against exceptions. */
+            const size_type prevSize = sz;
+            sz += numberOfElements;
 
-        assignRangeForward(first, last, data + positionAsIndex);  // Copy assign new elements to the given position
+            /* The remaining ones will not be located after the current size.
+             * Hence, we can just copy assign them */
+            assignRangeForward(begin() + positionAsIndex, begin() + prevSize - numberOfElements, begin() + positionAsIndex + numberOfElements);
+        }
+        else
+        {
+            moveRangeForward(begin() + positionAsIndex, end(), end() + (numberOfElements - (size() - positionAsIndex)));
+
+            // Moving the element outside of the current size increments the size by one.
+            sz += numberOfElements;
+        }
+
+        // Construct new elements
+        size_type constructed = 0;
+        for( ; (constructed < numberOfElements) && (first != last); ++constructed)
+            *(data + positionAsIndex + constructed) = *(first++);
     }
 
-    sz += numberOfElements;
-
-    return (data + positionAsIndex);
+    return (data + positionAsIndex);  // Data pointer may be changed
 }
 
 /**
@@ -750,36 +904,93 @@ T* Vector<T, Allocator>::insert(iterator position, size_type numberOfElements, c
     if((position < begin()) || (position > end()))
         throw(std::invalid_argument("Position must rely inside the container!"));
 
-    if(numberOfElements == 0)
-        throw(std::invalid_argument("At least one element must be inserted!"));
-
-    difference_type positionAsIndex = std::distance(begin(), position);
+    const size_type positionAsIndex = size_type(std::distance(begin(), position));
 
     if(size() + numberOfElements > capacity())    // Is bigger space needed?
     {
-        /* If there will be reallocations for multiple times,
-         * we better reallocate for the final size in a single operation
-         * to enhance optimization of insertion. */
-        grow(nextPowerOf2(size() + numberOfElements), true, positionAsIndex, numberOfElements);
+        value_type* newData = nullptr;
+        size_type copied = 0, constructed = 0;
 
-        copyRangeForward(begin() + positionAsIndex, begin() + positionAsIndex + numberOfElements, value);  // Copy construct new elements at given position
+        // Reallocation and construction of the new element
+        newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(size() + numberOfElements));
+
+        try{
+            // Construct the new elements
+            for( ; constructed < numberOfElements; ++constructed)
+                std::allocator_traits<Allocator>::construct(allocator, newData + positionAsIndex + constructed, value);
+
+            // Copy the elements on the left side of the requested position
+            for( ; copied < positionAsIndex; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(data + copied));
+
+            // Copy the elements on the right side of the requested position
+            for( ; copied < sz; ++copied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + copied + numberOfElements, *(data + copied));
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            // Replace data pointer and capacity
+            data    = newData;
+            cap     = nextPowerOf2(size() + numberOfElements);
+            sz += numberOfElements;
+        }catch(...){
+            // Destruct the new elements
+            for( ; constructed > 0; --constructed)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + positionAsIndex + constructed - 1);
+
+            // Destruct items copied to the right side of the requested position
+            for( ; copied > positionAsIndex; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied + numberOfElements - 1);
+
+            // Destruct items copied to the left side of the requested position
+            for( ; copied != 0; --copied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate the exception
+        }
     }
     else
     {
+        /* The new element may already be an element of the current Vector
+         * Thus, we shall create a copy of it. */
+        value_type temp(value);
+
         /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
-         * ones should only be copy assigned(right shifted). */
-        moveRangeForward(end() - numberOfElements, end(), end());
+         * ones should only be copy assigned(right shifted). The area located
+         * after the current size is a raw space. */
+        if(numberOfElements <= (size() - positionAsIndex))
+        {
+            moveRangeForward(end() - numberOfElements, end(), end());
 
-        // Copy assign the remaining ones
-        assignRangeBackward(position, end() - numberOfElements, position + numberOfElements);
+            /* Moving the element outside of the current size increments the size by one.
+             * Size should be incremented before assignment process as it is vulnerable against exceptions. */
+            const size_type prevSize = sz;
+            sz += numberOfElements;
 
-        assignRangeForward(begin() + positionAsIndex, begin() + positionAsIndex + numberOfElements, value);  // Copy assign new elements to the given position
+            /* The remaining ones will not be located after the current size.
+             * Hence, we can just copy assign them */
+            assignRangeForward(begin() + positionAsIndex, begin() + prevSize - numberOfElements, begin() + positionAsIndex + numberOfElements);
+        }
+        else
+        {
+            moveRangeForward(begin() + positionAsIndex, end(), end() + (numberOfElements - (size() - positionAsIndex)));
+
+            // Moving the element outside of the current size increments the size by one.
+            sz += numberOfElements;
+        }
+
+        // Construct new elements
+        size_type constructed = 0;
+        for( ; constructed < numberOfElements; ++constructed)
+            *(data + positionAsIndex + constructed) = std::move(temp);
     }
 
-    sz += numberOfElements;
-
-    return (data + positionAsIndex);
+    return (data + positionAsIndex);  // Data pointer may be changed
 }
 
 /**
@@ -806,26 +1017,77 @@ T* Vector<T, Allocator>::insert(iterator position, const_reference value)
 
     if(size() == capacity())    // Is bigger space needed?
     {
-        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
+        value_type* newData = nullptr;
+        size_type numOfCopied = 0, constructed = 0;
 
-        new(data + positionAsIndex) value_type(value);
+        // Reallocation and construction of the new element
+        newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(cap));
+
+        try{
+            // Construct the new element
+            std::allocator_traits<Allocator>::construct(allocator, newData + positionAsIndex, value);
+            ++constructed;
+
+            // Copy the elements on the left side of the requested position
+            for( ; numOfCopied < positionAsIndex; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied, *(data + numOfCopied));
+
+            // Copy the elements on the right side of the requested position
+            for( ; numOfCopied < sz; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied + 1, *(data + numOfCopied));
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            // Replace data pointer and capacity
+            data    = newData;
+            cap     = nextPowerOf2(cap);
+            ++sz;
+        }catch(...){
+            // Destruct the new element
+            if(0 != constructed)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + positionAsIndex);
+
+            // Destruct items copied to the right side of the requested position
+            for( ; numOfCopied > positionAsIndex; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied);
+
+            // Destruct items copied to the left side of the requested position
+            for( ; numOfCopied != 0; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate the exception
+        }
     }
     else
     {
+        /* The new element may already be an element of the current Vector
+         * Thus, we shall create a copy of it. */
+        value_type temp(value);
+
         /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
-         * ones should only be copy assigned(right shifted). */
+         * ones should only be copy assigned(right shifted). The area located
+         * after the current size is a raw space. */
         moveRangeForward(end() - 1, end(), end());
 
-        // Copy assign the remaining ones
-        assignRangeBackward(position, end() - 1, position + 1);
+        /* Moving the element outside of the current size increments the size by one.
+         * Size should be incremented before assignment process as it is vulnerable against exceptions. */
+        ++sz;
 
-        *(data + positionAsIndex) = value;
+        /* The remaining ones will not be located after the current size.
+         * Hence, we can just copy assign them */
+        assignRangeBackward(position, end() - 2, position + 1);
+
+        /* The new element will also be located inside the currently used space,
+         * so it can also be copy assigned */
+        *(data + positionAsIndex) = std::move(temp);
     }
 
-    ++sz;   // Increment size by one
-
-    return (data + positionAsIndex);  // Data may be changed
+    return (data + positionAsIndex);  // Data pointer may be changed
 }
 
 /**
@@ -848,30 +1110,77 @@ T* Vector<T, Allocator>::insert(iterator position, value_type&& value)
         return (end() - 1);     // end() may be changed
     }
 
-    const size_type positionAsIndex = std::distance(begin(), position);
+    const size_type positionAsIndex = size_type(std::distance(begin(), position));
 
     if(size() == capacity())    // Is bigger space needed?
     {
-        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
+        value_type* newData = nullptr;
+        size_type numOfCopied = 0, constructed = 0;
 
-        new(data + positionAsIndex) value_type(std::move(value));
+        // Reallocation and construction of new element
+        newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(cap));
+
+        try{
+            // Construct the new element
+            std::allocator_traits<Allocator>::construct(allocator, newData + positionAsIndex, std::move(value));
+            ++constructed;
+
+            // Copy the elements on the left side of the requested position
+            for( ; numOfCopied < positionAsIndex; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied, *(data + numOfCopied));
+
+            // Copy the elements on the right side of the requested position
+            for( ; numOfCopied < sz; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied + 1, *(data + numOfCopied));
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            // Replace data pointer and capacity
+            data    = newData;
+            cap     = nextPowerOf2(cap);
+            ++sz;
+        }catch(...){
+            // Destruct new element
+            if(0 != constructed)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + positionAsIndex);
+
+            // Destruct items copied to the right side of the requested position
+            for( ; numOfCopied > positionAsIndex; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied);
+
+            // Destruct items copied to the left side of the requested position
+            for( ; numOfCopied != 0; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate the exception
+        }
     }
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
-         * ones should only be copy assigned(right shifted). */
+         * ones should only be copy assigned(right shifted). The area located
+         * after the current size is a raw space. */
         moveRangeForward(end() - 1, end(), end());
 
-        // Copy assign the remaining ones
-        assignRangeBackward(position, end() - 1, position + 1);
+        /* Moving the element outside of the current size increments the size by one.
+         * Size should be incremented before assignment process as it is vulnerable against exceptions. */
+        ++sz;
 
+        /* The remaining ones will not be located after the current size.
+         * Hence, we can just copy assign them */
+        assignRangeBackward(position, end() - 2, position + 1);
+
+        /* The new element will also be located inside the currently used space,
+         * so it can also be copy assigned */
         *(data + positionAsIndex) = std::move(value);
     }
 
-    ++sz;   // Increment size by one
-
-    return (data + positionAsIndex);  // Data may be changed
+    return (data + positionAsIndex);  // Data pointer may be changed
 }
 
 /**
@@ -985,27 +1294,71 @@ T* Vector<T, Allocator>::emplace(iterator position, Args&&... args)
 
     if(size() == capacity())    // Is bigger space needed?
     {
-        grow(nextPowerOf2(capacity()), true, positionAsIndex, 1);
+        value_type* newData = nullptr;
+        size_type numOfCopied = 0, constructed = 0;
 
-        std::allocator_traits<Allocator>::construct(allocator, data + positionAsIndex, std::forward<Args>(args)...);
+        // Reallocation and construction of the new element
+        newData = std::allocator_traits<Allocator>::allocate(allocator, nextPowerOf2(cap));
+
+        try{
+            // Construct the new element
+            std::allocator_traits<Allocator>::construct(allocator, newData + positionAsIndex, std::forward<Args>(args)...);
+            ++constructed;
+
+            // Copy the elements on the left side of the requested position
+            for( ; numOfCopied < positionAsIndex; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied, *(data + numOfCopied));
+
+            // Copy the elements on the right side of the requested position
+            for( ; numOfCopied < sz; ++numOfCopied)
+                std::allocator_traits<Allocator>::construct(allocator, newData + numOfCopied + 1, *(data + numOfCopied));
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            // Replace data pointer and capacity
+            data    = newData;
+            cap     = nextPowerOf2(cap);
+            ++sz;
+        }catch(...){
+            // Destruct the new element
+            if(0 != constructed)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + positionAsIndex);
+
+            // Destruct items copied to the right side of the requested position
+            for( ; numOfCopied > positionAsIndex; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied);
+
+            // Destruct items copied to the left side of the requested position
+            for( ; numOfCopied != 0; --numOfCopied)
+                std::allocator_traits<Allocator>::destroy(allocator, newData + numOfCopied - 1);
+
+            destroyPointer(newData);
+
+            throw;  // Propagate the exception
+        }
     }
     else
     {
         /* If there wasn't a reallocation, then move constructing the elements
          * that will locate after the current size is enough. The remaining
-         * ones should only be copy assigned(right shifted). */
+         * ones should only be copy assigned(right shifted). The area located
+         * after the current size is a raw space. */
         moveRangeForward(end() - 1, end(), end());
 
-        // Copy assign the remaining ones
-        assignRangeBackward(position, end() - 1, position + 1);
+        /* Moving the element outside of the current size increments the size by one.
+         * Size should be incremented before assignment process as it is vulnerable against exceptions. */
+        ++sz;
 
-        std::allocator_traits<Allocator>::destroy(allocator, position); // Destroy old element
+        /* The remaining ones will not be located after the current size.
+         * Hence, we can just copy assign them */
+        assignRangeBackward(position, end() - 2, position + 1);
 
-        // Construct new element with the given arguments
+        /* The new element will also be located inside the currently used space,
+         * so it can also be copy assigned */
         std::allocator_traits<Allocator>::construct(allocator, position, std::forward<Args>(args)...);
     }
-
-    sz++;
 
     return (data + positionAsIndex);  // Data may be changed
 }
@@ -1020,7 +1373,14 @@ void Vector<T, Allocator>::emplace_back(Args&&... args)
 {
     if(size() == capacity())    // Size is about to surpass the capacity
     {
-        grow(nextPowerOf2(capacity()), true);
+        value_type* newData = grow(nextPowerOf2(cap), true);   // Grow and copy the current content
+
+        // Destroy old content
+        destroyRange(begin(), end());
+        destroyPointer(data);
+
+        data    = newData;
+        cap     = nextPowerOf2(cap);
     }
 
     // Copy construct new element with the incoming one
@@ -1037,28 +1397,63 @@ template<class T, class Allocator>
 void Vector<T, Allocator>::resize(const size_type newSize)
 {
     if(0 == newSize)
+    {
         return clear();
-    else if(size() == newSize)
-        return;
-    else { }
-
-    if(newSize < size())
+    }
+    else if(newSize < size())
     {
         destroyRange(begin() + newSize, end());
     }
-    else
+    else if(size() == newSize)
     {
-        if(newSize < capacity())
+        return;
+    }
+    else    // Requested size is bigger than the current size
+    {
+        size_type constructed = 0;
+
+        if(newSize < capacity())    // Is reallocation needed?
         {
-            for(size_type index = size(); index < newSize; ++index)
-                std::allocator_traits<Allocator>::construct(allocator, data + index);
+            try {
+                // Default construct the additional elements
+                for( ; constructed < (newSize - sz); ++constructed)
+                    std::allocator_traits<Allocator>::construct(allocator, data + sz + constructed);
+            }catch(...){
+                // Destruct all new elements and preserve the last state
+                for( ; constructed > 0; --constructed)
+                    std::allocator_traits<Allocator>::destroy(allocator, data + sz + constructed - 1);
+
+                throw; // Propagate exception
+            }
         }
         else    // Reallocation needed
         {
-            grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
+            value_type* newData = grow(newSize, true);  // Grow and preserve the content
 
-            for(size_type index = size(); index < newSize; ++index)
-                std::allocator_traits<Allocator>::construct(allocator, data + index);
+            try {
+                // Default construct the additional elements
+                for( ; constructed < (newSize - sz); ++constructed)
+                    std::allocator_traits<Allocator>::construct(allocator, newData + sz + constructed);
+            }catch(...){
+                // Destruct all new elements and preserve the last state
+                for( ; constructed > 0; --constructed)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + size() + constructed - 1);
+
+                // Destroy copied elements
+                for(size_type index = 0; index < size(); ++index)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + index);
+
+                destroyPointer(newData);
+
+                throw; // Propagate exception
+            }
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            data    = newData;
+            cap     = newSize;
         }
     }
 
@@ -1074,28 +1469,63 @@ template<class T, class Allocator>
 void Vector<T, Allocator>::resize(const size_type newSize, const_reference fillValue)
 {
     if(0 == newSize)
+    {
         return clear();
-    else if(size() == newSize)
-        return;
-    else { }
-
-    if(newSize < size())
+    }
+    else if(newSize < size())
     {
         destroyRange(begin() + newSize, end());
     }
-    else
+    else if(size() == newSize)
     {
-        if(newSize < capacity())
+        return;
+    }
+    else    // Requested size is bigger than the current size
+    {
+        size_type constructed = 0;
+
+        if(newSize < capacity())    // Is reallocation needed?
         {
-            for(size_type index = size(); index < newSize; ++index)
-                std::allocator_traits<Allocator>::construct(allocator, data + index, fillValue);
+            try {
+                // Default construct the additional elements
+                for( ; constructed < (newSize - sz); ++constructed)
+                    std::allocator_traits<Allocator>::construct(allocator, data + sz + constructed, fillValue);
+            }catch(...){
+                // Destruct all new elements and preserve the last state
+                for( ; constructed > 0; --constructed)
+                    std::allocator_traits<Allocator>::destroy(allocator, data + size() + constructed - 1);
+
+                throw; // Propagate exception
+            }
         }
         else    // Reallocation needed
         {
-            grow(nextPowerOf2(newSize), true);  // Grow and preserve the content
+            value_type* newData = grow(newSize, true);  // Grow and preserve the content
 
-            for(size_type index = size(); index < newSize; ++index)
-                std::allocator_traits<Allocator>::construct(allocator, data + index, fillValue);
+            try {
+                // Default construct the additional elements
+                for( ; constructed < (newSize - sz); ++constructed)
+                    std::allocator_traits<Allocator>::construct(allocator, newData + sz + constructed, fillValue);
+            }catch(...){
+                // Destruct all new elements and preserve the last state
+                for( ; constructed > 0; --constructed)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + size() + constructed - 1);
+
+                // Destroy copied elements
+                for(size_type index = 0; index < size(); ++index)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + index);
+
+                destroyPointer(newData);
+
+                throw; // Propagate exception
+            }
+
+            // Destroy old content
+            destroyRange(begin(), end());
+            destroyPointer(data);
+
+            data    = newData;
+            cap     = newSize;
         }
     }
 
@@ -1112,7 +1542,12 @@ void Vector<T, Allocator>::reserve(const size_type reservationSize)
     if(reservationSize <= capacity())
         return;
 
-    return grow(reservationSize, true);
+    value_type* newData = grow(reservationSize, true);
+
+    destroyRange(begin(), end());
+    destroyPointer(data);
+    data    = newData;
+    cap     = reservationSize;
 }
 
 /**
@@ -1125,15 +1560,28 @@ void Vector<T, Allocator>::shrink_to_fit()
     if(size() == capacity())
         return;
 
-    cap = size();
-    value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, size());
+    size_type copied    = 0;
 
-    copyRangeForward(begin(), end(), newData);
+    try{
+        // Copy construct current elements
+        for( ; copied < sz; ++copied)
+            std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(data + copied));
+    }catch(...){
+        // Destruct copied elements
+        for( ; 0 < copied; --copied)
+            std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+        destroyPointer(newData);
+
+        throw; // Propagate exception
+    }
 
     destroyRange(begin(), end());
     destroyPointer(data);
 
     data = newData;
+    cap = size();
 }
 
 /**
@@ -1287,7 +1735,7 @@ void Vector<T, Allocator>::copyRangeBackward(InputIterator from, InputIterator t
  * @throw   std::invalid_argument   If the gap index is outside of the container
  */
 template<class T, class Allocator>
-void Vector<T, Allocator>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
+T* Vector<T, Allocator>::grow(size_type newCap, bool copy, size_type gapIndex, size_type gapSize)
 {
     if(newCap < cap + gapSize)
         throw std::invalid_argument("Cannot grow to a smaller capacity!");
@@ -1296,26 +1744,56 @@ void Vector<T, Allocator>::grow(size_type newCap, bool copy, size_type gapIndex,
         throw std::invalid_argument("Cannot create gap outside of the container!");
 
     // Allocate new space
-    cap = newCap;
-    value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, cap);
+    value_type* newData = std::allocator_traits<Allocator>::allocate(allocator, newCap);
 
     if(true == copy)    // If copying the old items is needed
     {
+        size_type copied = 0;
+
         if(gapSize > 0) // Is a gap needed?
         {
-            copyRangeForward(begin(),               begin() + gapIndex, newData);                       // Copy items on the left side of the gap
-            copyRangeForward(begin() + gapIndex,    end(),              newData + gapIndex + gapSize);  // Copy items on the right side of the gap
+            try {
+                // Copy construct items on the left side of the gap
+                for( ; copied < gapIndex; ++copied)
+                    std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(data + copied));
+
+                // Copy construct items on the right side of the gap
+                for( ; copied < sz; ++copied)
+                    std::allocator_traits<Allocator>::construct(allocator, newData + copied + gapSize, *(data + copied));
+
+            }catch(...){
+                // Destruct items on the right side of the gap
+                for( ; copied > gapIndex; --copied)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + copied + gapSize - 1);
+
+                // Destruct items on the left side of the gap
+                for( ; copied > 0; --copied)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+                destroyPointer(newData);
+
+                throw;  // Propagate exception
+            }
         }
         else
         {
-            copyRangeForward(begin(), end(), newData);
+            try {
+                // Copy construct elements at new space
+                for( ; copied < sz; ++copied)
+                    std::allocator_traits<Allocator>::construct(allocator, newData + copied, *(data + copied));
+            }catch(...){
+                // Destruct copied elements
+                for( ; copied > 0; --copied)
+                    std::allocator_traits<Allocator>::destroy(allocator, newData + copied - 1);
+
+                destroyPointer(newData);
+
+                throw;  // Propagate exception
+            }
         }
     }
 
-    destroyRange(begin(), end());
-    destroyPointer(data);
-
-    data = newData;
+    return newData;
 }
 
 template<class T, class Allocator>
@@ -1323,7 +1801,7 @@ void Vector<T, Allocator>::destroyRange(iterator from, iterator to)
 {
     /* The operator delete[] wouldn't work appropriately as we
      * used the placement new operator and constructed each element
-     * at the time of the insertion*/
+     * at the time of the insertion. */
     for( ; from != to; ++from)
         std::allocator_traits<Allocator>::destroy(allocator, from);
 }
@@ -1332,7 +1810,7 @@ template<class T, class Allocator>
 void Vector<T, Allocator>::destroyPointer(iterator ptr)
 {
     /* The allocated space will not be used anymore.
-     * We shall release the resource for further usage */
+     * We shall release the resource for further usage. */
     std::allocator_traits<Allocator>::deallocate(allocator, ptr, sz);
 }
 

@@ -17,7 +17,6 @@
  *              May 2, 2021    -> Vulnerability against exceptions caused by modifier functions fixed.
  *                             -> get_allocator() function added
  *
- *
  *  @note       Feel free to contact for questions, bugs or any other thing.
  *  @copyright  No copyright.
  */
@@ -77,7 +76,7 @@ public:
 
     // Move constructors
     Vector(Vector&& moveVector) noexcept(std::is_nothrow_swappable_v<T*>);
-    Vector(Vector&& moveVector, const allocator_type& alloc = allocator_type()) noexcept(std::is_nothrow_swappable_v<T*>);
+    Vector(Vector&& moveVector, const allocator_type& alloc) noexcept(std::is_nothrow_swappable_v<T*>);
 
     // Initializer List constructor
     Vector(std::initializer_list<value_type> initializerList, const allocator_type& alloc = allocator_type());

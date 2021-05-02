@@ -162,17 +162,12 @@ private:
     /*** Helper Functions ***/
     template<class InputIterator>
     void assignRangeForward(InputIterator from, InputIterator to, iterator destination);
-    void assignRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>
     void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
     void moveRangeForward(InputIterator from, InputIterator to, iterator destination);
-    void moveRangeForward(iterator from, iterator to, const_reference value);
-
-    template<class InputIterator>
-    void moveRangeBackward(InputIterator from, InputIterator to, iterator destination);
 
     template<class InputIterator>
     void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
@@ -241,7 +236,8 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const allocator_type
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz);
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -267,7 +263,8 @@ Vector<T, Allocator>::Vector(const size_type numOfElements, const_reference fill
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, fillValue);
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -299,7 +296,8 @@ Vector<T, Allocator>::Vector(InputIterator first, InputIterator last, const allo
         for(; sz < numOfElements; ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, *(first + sz));
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -323,7 +321,8 @@ Vector<T, Allocator>::Vector(const Vector& copyVector)
         for(; sz < copyVector.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -350,7 +349,8 @@ Vector<T, Allocator>::Vector(const Vector& copyVector, const allocator_type& all
         for(; sz < copyVector.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, copyVector[sz]);
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -404,7 +404,8 @@ Vector<T, Allocator>::Vector(std::initializer_list<value_type> initializerList, 
         for(; sz < initializerList.size(); ++sz)
             std::allocator_traits<Allocator>::construct(allocator, data + sz, *(initializerList.begin() + sz));
     }catch(...){
-        this->~Vector();
+        destroyRange(begin(), end());
+        destroyPointer(data);
 
         throw;
     }
@@ -434,31 +435,8 @@ Vector<T, Allocator>::~Vector() noexcept(std::is_nothrow_destructible_v<T>)
 template<class T, class Allocator>
 Vector<T, Allocator>& Vector<T, Allocator>::operator=(const Vector& copyVector)
 {
-    if(this == &copyVector) // Check self assignment
-        return *this;
-
-    if(copyVector.size() > capacity()) // Reallocation needed?
-    {
-        grow(nextPowerOf2(copyVector.size()));
-        sz = 0;
-    }
-
-    /* Currently used posisitions inside the container are assignable.
-     * The rest of them needs construction by copying. */
-    if(0 == sz)
-        copyRangeForward(copyVector.begin(), copyVector.begin() + copyVector.size(), begin());
-    else if(copyVector.size() < sz)
-    {
-        assignRangeForward(copyVector.begin(), copyVector.begin() + copyVector.size(), begin());
-        destroyRange(begin() + copyVector.size(), end());
-    }
-    else
-    {
-        assignRangeForward(copyVector.begin(), copyVector.begin() + sz, begin());
-        copyRangeForward(copyVector.begin() + sz, copyVector.end(), begin() + sz);
-    }
-
-    sz = copyVector.size(); // Adjust size
+    if(this != &copyVector) // Check self assignment
+        assign(copyVector.begin(), copyVector.end());
 
     return *this;
 }
@@ -488,7 +466,7 @@ Vector<T, Allocator>& Vector<T, Allocator>::operator=(Vector&& moveVector) noexc
  * @return  true if vectors are equal
  */
 template<class T, class Allocator>
-bool Vector<T, Allocator>::operator==(const Vector<T, Allocator>& rightVector) const
+bool Vector<T, Allocator>::operator==(const Vector& rightVector) const
 {
     if(this == &rightVector)            // Self comparison
         return true;
@@ -512,28 +490,7 @@ bool Vector<T, Allocator>::operator==(const Vector<T, Allocator>& rightVector) c
 template<class T, class Allocator>
 Vector<T, Allocator>& Vector<T, Allocator>::operator=(std::initializer_list<value_type> initializerList)
 {
-    if(initializerList.size() > capacity()) // Reallocation needed?
-    {
-        grow(nextPowerOf2(initializerList.size()));
-        sz = 0;
-    }
-
-    /* Currently used posisitions inside the container are assignable.
-     * The rest of them needs construction by copying. */
-    if(0 == sz)
-        copyRangeForward(initializerList.begin(), initializerList.begin() + initializerList.size(), begin());
-    else if(initializerList.size() < sz)
-    {
-        assignRangeForward(initializerList.begin(), initializerList.begin() + initializerList.size(), begin());
-        destroyRange(begin() + initializerList.size(), end());
-    }
-    else /* (initializerList.size() > sz) */
-    {
-        assignRangeForward(initializerList.begin(), initializerList.begin() + sz, begin());
-        copyRangeForward(initializerList.begin() + sz, initializerList.end(), begin() + sz);
-    }
-
-    sz = initializerList.size(); // Adjust size
+    assign(initializerList);
 
     return *this;
 }
@@ -616,6 +573,10 @@ void Vector<T, Allocator>::assign(InputIterator first, InputIterator last)
             // Copy construct assigned elements
             for( ; copied < numberOfElements; ++copied)
                 std::allocator_traits<Allocator>::construct(allocator, data + copied, *(first++));
+
+            // Destruct cyclic elements
+            for(size_type index = size(); index > numberOfElements; --index)
+                std::allocator_traits<Allocator>::destroy(allocator, data + index - 1);
         }catch(...){
             for( ; copied > 0; --copied)
                 std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
@@ -673,6 +634,10 @@ void Vector<T, Allocator>::assign(size_type numberOfElements, const_reference fi
             // Copy construct assigned elements
             for( ; copied < numberOfElements; ++copied)
                 std::allocator_traits<Allocator>::construct(allocator, data + copied, fillValue);
+
+            // Destruct cyclic elements
+            for(size_type index = size(); index > numberOfElements; --index)
+                std::allocator_traits<Allocator>::destroy(allocator, data + index - 1);
         }catch(...){
             for( ; copied > 0; --copied)
                 std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
@@ -728,6 +693,10 @@ void Vector<T, Allocator>::assign(std::initializer_list<T> initializerList)
             // Copy construct assigned elements
             for( ; copied < initializerList.size(); ++copied)
                 std::allocator_traits<Allocator>::construct(allocator, data + copied, *(initializerList.begin() + copied));
+
+            // Destruct cyclic elements
+            for(size_type index = size(); index > initializerList.size(); --index)
+                std::allocator_traits<Allocator>::destroy(allocator, data + index - 1);
         }catch(...){
             for( ; copied > 0; --copied)
                 std::allocator_traits<Allocator>::destroy(allocator, data + copied - 1);
@@ -1600,19 +1569,6 @@ void Vector<T, Allocator>::assignRangeForward(InputIterator from, InputIterator 
 }
 
 /**
- * @brief   Helper method for assigning value to a range of elements in a forward order.
- * @param   from    Starting point of destination range
- * @param   to      Ending point of destination range(excluded)
- * @param   value   Value to be copied to the elements in the destination range.
- */
-template<class T, class Allocator>
-void Vector<T, Allocator>::assignRangeForward(iterator from, iterator to, const_reference value)
-{
-    for( ; from != to; ++from)
-        *from = value;
-}
-
-/**
  * @brief   Helper method for assigning ranges in a forward order.
  * @param   from            Starting point of source range
  * @param   to              Ending point of source range(excluded)
@@ -1644,38 +1600,6 @@ void Vector<T, Allocator>::moveRangeForward(InputIterator from, InputIterator to
 {
     for( ; from != to; ++from, ++destination)
         std::allocator_traits<Allocator>::construct(allocator, destination, std::move(*from));
-}
-
-/**
- * @brief   Helper method for move assigning value to a range of elements in a forward order.
- * @param   from    Starting point of destination range
- * @param   to      Ending point of destination range(excluded)
- * @param   value   Value to be move assigned to the elements in the destination range.
- */
-template<class T, class Allocator>
-void Vector<T, Allocator>::moveRangeForward(iterator from, iterator to, const_reference value)
-{
-    for( ; from != to; ++from)
-        *from = std::move(value);
-}
-
-/**
- * @brief   Helper method for moving ranges in a backward order.
- * @param   from            Starting point of source range
- * @param   to              Ending point of source range(excluded)
- * @param   destination     Starting point of destination range
- * @note    Use if the ranges overlaps each other
- */
-template<class T, class Allocator>
-template<class InputIterator>
-void Vector<T, Allocator>::moveRangeBackward(InputIterator from, InputIterator to, iterator destination)
-{
-    /* Backward copying will help to prevent corruption of data
-     * when two ranges overlap each other. */
-    destination += to - from - 1;   // Start from the last
-
-    for( ; to != from; --to, --destination)
-        std::allocator_traits<Allocator>::construct(allocator, destination, std::move(*(to - 1)));
 }
 
 /**

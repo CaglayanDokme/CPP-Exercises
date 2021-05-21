@@ -22,8 +22,8 @@
  */
 
 /*** Recursive inclusion preventer ***/
-#ifndef VECTOR_CONTAINER_H
-#define VECTOR_CONTAINER_H
+#pragma once
+
 
 /*** Libraries ***/
 #include <initializer_list>     // std::initializer_list
@@ -48,14 +48,14 @@ template<class T, class Allocator = std::allocator<T>>
 class Vector{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
-    using value_type      = T             ;
-    using reference       = T&            ;
-    using const_reference = const T&      ;
-    using iterator        = T*            ;
-    using const_iterator  = const T*      ;
+    using value_type = T;
+    using reference = T&;
+    using const_reference = const T&;
+    using iterator = T*;
+    using const_iterator = const T*;
     using difference_type = std::ptrdiff_t;
-    using size_type       = std::size_t   ;
-    using allocator_type  = Allocator     ;
+    using size_type = std::size_t;
+    using allocator_type = Allocator;
 
     /*** Constructors and Destructors ***/
     // Default constructors
@@ -64,7 +64,7 @@ public:
 
     // Fill Constructors
     explicit Vector(const size_type numOfElements, const allocator_type& alloc = allocator_type());
-    Vector(const size_type numOfElements, const value_type& fillValue, const allocator_type& alloc = allocator_type());
+    Vector(size_type numOfElements, const value_type& fillValue, const allocator_type& alloc = allocator_type());
 
     // Range constructor
     template<class InputIterator>
@@ -160,7 +160,7 @@ private:
 
     /*** Helper Functions ***/
     template<class InputIterator>
-    void assignRangeForward(InputIterator from, InputIterator to, iterator destination);
+    void assignRangeForward(InputIterator from, InputIterator to, iterator destination); // snake_case or camelCase standardization
 
     template<class InputIterator>
     void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
@@ -170,6 +170,7 @@ private:
 
     template<class InputIterator>
     void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
+    
     void copyRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>
@@ -185,9 +186,9 @@ private:
 std::size_t nextPowerOf2(std::size_t N)
 {
     if(0 == N)
-        return 1;
+        return 1u;
 
-    std::size_t maxValuedBit = 1;
+    std::size_t maxValuedBit = 1u;
 
     while(0 != N)
     {
@@ -205,6 +206,7 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector() noexcept
 : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
+Vector() = default;
 
 template<class T, class Allocator>
 /**

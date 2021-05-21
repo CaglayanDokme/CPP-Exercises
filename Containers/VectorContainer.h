@@ -189,8 +189,7 @@ std::size_t nextPowerOf2(std::size_t N)
 
     std::size_t maxValuedBit = 1u;
 
-    while(0 != N)
-    {
+    while(0 != N) {
         N = N >> 1;
         maxValuedBit = maxValuedBit << 1;
     }

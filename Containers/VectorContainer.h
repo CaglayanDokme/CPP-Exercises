@@ -24,7 +24,6 @@
 /*** Recursive inclusion preventer ***/
 #pragma once
 
-
 /*** Libraries ***/
 #include <initializer_list>     // std::initializer_list
 #include <type_traits>          // For exception conditions

@@ -160,7 +160,7 @@ private:
 
     /*** Helper Functions ***/
     template<class InputIterator>
-    void assignRangeForward(InputIterator from, InputIterator to, iterator destination); // snake_case or camelCase standardization
+    void assignRangeForward(InputIterator from, InputIterator to, iterator destination); // TODO: snake_case or camelCase standardization
 
     template<class InputIterator>
     void assignRangeBackward(InputIterator from, InputIterator to, iterator destination);
@@ -170,7 +170,7 @@ private:
 
     template<class InputIterator>
     void copyRangeForward(InputIterator from, InputIterator to, iterator destination);
-    
+
     void copyRangeForward(iterator from, iterator to, const_reference value);
 
     template<class InputIterator>

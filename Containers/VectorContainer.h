@@ -204,7 +204,6 @@ template<class T, class Allocator>
 Vector<T, Allocator>::Vector() noexcept
 : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
-Vector() = default;
 
 template<class T, class Allocator>
 /**
@@ -1745,5 +1744,3 @@ std::ostream& operator<<(std::ostream& stream, const Vector<T, Allocator>& vecto
 
     return stream;
 }
-
-#endif

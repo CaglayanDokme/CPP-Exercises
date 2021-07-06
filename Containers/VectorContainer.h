@@ -47,16 +47,16 @@ template<class T, class Allocator = std::allocator<T>>
 class Vector{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
-    using value_type = T;
-    using reference = T&;
-    using const_reference = const T&;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using difference_type = std::ptrdiff_t;
-    using size_type = std::size_t;
-    using allocator_type = Allocator;
+    using value_type        = T;
+    using reference         = T&;
+    using const_reference   = const T&;
+    using iterator          = T*;
+    using const_iterator    = const T*;
+    using difference_type   = std::ptrdiff_t;
+    using size_type         = std::size_t;
+    using allocator_type    = Allocator;
 
-    /*** Constructors and Destructors ***/
+    /*** Constructors and Destructor ***/
     // Default constructors
     Vector() noexcept;
     explicit Vector(const allocator_type& alloc);
@@ -205,12 +205,12 @@ Vector<T, Allocator>::Vector() noexcept
 : sz(0), cap(0), data(nullptr)
 { /* Empty constructor */ }
 
-template<class T, class Allocator>
 /**
  * @brief   Default constructor with allocator object
  * @param   alloc   Allocator object
  * @note    Container will use this allocator object to manage memory operations.
  */
+template<class T, class Allocator>
 Vector<T, Allocator>::Vector(const allocator_type& alloc)
 : sz(0), cap(0), data(nullptr), allocator(alloc)
 { /* Empty constructor */ }

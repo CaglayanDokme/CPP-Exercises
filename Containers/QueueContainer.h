@@ -3,7 +3,7 @@
  * @details     A template queue container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
  * @date        July 6, 2021 -> First release
- *              July 8, 2021 -> Copy constructor added.
+ *              July 8, 2021 -> Copy and move constructors added.
  * @note        Feel free to contact for questions, bugs or any other thing.
  * @copyright   No copyright.
  */
@@ -48,6 +48,9 @@ public:
     // Copy Constructor
     Queue(const Queue& copyQ);
 
+    // Move Constructor
+    Queue(Queue&& moveQ);
+
     // Destructor
     ~Queue();
 
@@ -73,8 +76,8 @@ public:
 private:
     /*** Members ***/
     size_type       sz;                 // General size
-    size_type       idxInFrontChunk;    // Front index in the front chunk (index of the least recently added element)
-    size_type       idxInBackChunk;     // Back index in the back chunk (index after the last added element)
+    size_type       idxInFrontChunk;    // Front index in the front chunk (index of the oldest element)
+    size_type       idxInBackChunk;     // Back index in the back chunk (index 'after' the last added element)
     size_type       numOfChunks;        // Number of chunks (0 is the front)
     value_type**    chunks;             // Pointers of discrete chunks
     Allocator       allocator;          // Allocator policy
@@ -156,6 +159,14 @@ Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
         numOfChunks     = copyQ.numOfChunks;
         sz              = copyQ.sz;
     }
+}
+
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>::Queue(Queue&& moveQ)
+    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(moveQ.allocator)
+{
+    // Swap all members
+    swap(moveQ);
 }
 
 template<class T, std::size_t C_SIZE, class Allocator>

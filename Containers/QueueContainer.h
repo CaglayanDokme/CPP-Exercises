@@ -3,6 +3,7 @@
  * @details     A template queue container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
  * @date        July 6, 2021 -> First release
+ *              July 8, 2021 -> Copy constructor added.
  * @note        Feel free to contact for questions, bugs or any other thing.
  * @copyright   No copyright.
  */
@@ -24,7 +25,7 @@
 #endif
 
 /*** Container Class ***/
-template<class T, class Allocator = std::allocator<T>, std::size_t C_SIZE = 128>
+template<class T, std::size_t C_SIZE = 128, class Allocator = std::allocator<T>>
 class Queue{
 public:
     /*** C++ Standard Named Requirements for Containers ***/
@@ -38,8 +39,16 @@ public:
     using allocator_type    = Allocator;
 
     /*** Constructors and Destructor ***/
+    // Default constructor
     Queue();
 
+    // Allocator Constructor
+    explicit Queue(const Allocator& alloc);
+
+    // Copy Constructor
+    Queue(const Queue& copyQ);
+
+    // Destructor
     ~Queue();
 
     /*** Element Access ***/
@@ -58,8 +67,8 @@ public:
     void swap(Queue& x) noexcept;
 
     /*** Status Checkers ***/
-    bool        empty() const { return (0 == sz);   }
-    size_type   size()  const { return sz;          }
+    NODISCARD bool        empty() const { return (0 == sz);   }
+    NODISCARD size_type   size()  const { return sz;          }
 
 private:
     /*** Members ***/
@@ -71,19 +80,86 @@ private:
     Allocator       allocator;          // Allocator policy
 
     /*** Helper Functions ***/
-    bool isFrontChunkConsumed() const { return (C_SIZE == idxInFrontChunk); }
-    bool isNewChunkNeeded()     const { return ((C_SIZE == idxInBackChunk) || (0 == numOfChunks));  }
+    NODISCARD bool isFrontChunkConsumed() const { return (C_SIZE == idxInFrontChunk); }
+    NODISCARD bool isNewChunkNeeded()     const { return ((C_SIZE == idxInBackChunk) || (0 == numOfChunks)); }
     void createNewChunk();
     void removeFrontChunk();
 };
 
-template<class T, class Allocator, std::size_t C_SIZE>
-Queue<T, Allocator, C_SIZE>::Queue()
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>::Queue()
     : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr)
 { /* No operation */ }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-Queue<T, Allocator, C_SIZE>::~Queue()
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>::Queue(const Allocator& alloc)
+    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(alloc)
+{ /* No operation */ }
+
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
+    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(copyQ.allocator)
+{
+    // Check if the source Queue is empty
+    if(!copyQ.empty())
+    {
+        if((0 == copyQ.numOfChunks) || (nullptr == copyQ.chunks))
+            throw std::logic_error("Source Queue is corrupted!");
+
+        // Allocate space for chunk pointers
+        chunks = new value_type*[copyQ.numOfChunks];
+
+        if(nullptr == chunks)
+            throw std::runtime_error("Cannot allocate chunks array!");
+
+        numOfChunks = copyQ.numOfChunks;
+
+        // Allocate new chunks without constructing objects
+        for(size_type chunkIdx = 0; chunkIdx < numOfChunks; ++chunkIdx)
+        {
+            // Allocate space for the new chunk
+            chunks[chunkIdx] = std::allocator_traits<Allocator>::allocate(allocator, C_SIZE);
+
+            if(nullptr == chunks[chunkIdx])
+                throw std::runtime_error("Cannot allocate a new chunk!");
+        }
+
+        // Copy current objects to new chunks
+        for(size_type chunkIdx = 0; chunkIdx < numOfChunks; ++chunkIdx) // Traverse chunks
+        {
+            // Copy the front chunk
+            if(0 == chunkIdx)
+            {
+                // If the front chunk is the only chunk, then it may have missing elements
+                if(1 == copyQ.numOfChunks)
+                    for(size_type elemIdx = copyQ.idxInFrontChunk; elemIdx < idxInBackChunk; ++elemIdx)
+                        std::allocator_traits<Allocator>::construct(allocator, chunks[chunkIdx] + elemIdx, copyQ.chunks[chunkIdx][elemIdx]);
+                else
+                    for(size_type elemIdx = copyQ.idxInFrontChunk; elemIdx < C_SIZE; ++elemIdx)
+                        std::allocator_traits<Allocator>::construct(allocator, chunks[chunkIdx] + elemIdx, copyQ.chunks[chunkIdx][elemIdx]);
+            }
+            else if(chunkIdx < numOfChunks-1)
+            {
+                for(size_type elemIdx = 0; elemIdx < C_SIZE; ++elemIdx)
+                    std::allocator_traits<Allocator>::construct(allocator, chunks[chunkIdx] + elemIdx, copyQ.chunks[chunkIdx][elemIdx]);
+            }
+            else    // Back chunk
+            {
+                // Back chunk may have missing elements as it is not completely used yet
+                for(size_type elemIdx = 0; elemIdx < copyQ.idxInBackChunk; ++elemIdx)
+                    std::allocator_traits<Allocator>::construct(allocator, chunks[chunkIdx] + elemIdx, copyQ.chunks[chunkIdx][elemIdx]);
+            }
+        }
+
+        idxInBackChunk  = copyQ.idxInBackChunk;
+        idxInFrontChunk = copyQ.idxInFrontChunk;
+        numOfChunks     = copyQ.numOfChunks;
+        sz              = copyQ.sz;
+    }
+}
+
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>::~Queue()
 {
     if(!empty())
     {
@@ -120,8 +196,8 @@ Queue<T, Allocator, C_SIZE>::~Queue()
     delete [] chunks;
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-const T& Queue<T, Allocator, C_SIZE>::front() const
+template<class T, std::size_t C_SIZE, class Allocator>
+const T& Queue<T, C_SIZE, Allocator>::front() const
 {
     if(empty())
         throw std::logic_error("Queue is empty!");
@@ -129,9 +205,9 @@ const T& Queue<T, Allocator, C_SIZE>::front() const
     return chunks[0][idxInFrontChunk];
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
+template<class T, std::size_t C_SIZE, class Allocator>
 template <class... Args>
-void Queue<T, Allocator, C_SIZE>::emplace(Args&&... args)
+void Queue<T, C_SIZE, Allocator>::emplace(Args&&... args)
 {
     if(isNewChunkNeeded() == true)
     {
@@ -149,8 +225,8 @@ void Queue<T, Allocator, C_SIZE>::emplace(Args&&... args)
     ++idxInBackChunk;
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-T& Queue<T, Allocator, C_SIZE>::front()
+template<class T, std::size_t C_SIZE, class Allocator>
+T& Queue<T, C_SIZE, Allocator>::front()
 {
     if(empty())
         throw std::logic_error("Queue is empty!");
@@ -158,8 +234,8 @@ T& Queue<T, Allocator, C_SIZE>::front()
     return chunks[0][idxInFrontChunk];
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-const T& Queue<T, Allocator, C_SIZE>::back() const
+template<class T, std::size_t C_SIZE, class Allocator>
+const T& Queue<T, C_SIZE, Allocator>::back() const
 {
     if(empty())
         throw std::logic_error("Queue is empty!");
@@ -170,8 +246,8 @@ const T& Queue<T, Allocator, C_SIZE>::back() const
         return chunks[numOfChunks-1][idxInBackChunk-1];
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-T& Queue<T, Allocator, C_SIZE>::back()
+template<class T, std::size_t C_SIZE, class Allocator>
+T& Queue<T, C_SIZE, Allocator>::back()
 {
     if(empty())
         throw std::logic_error("Queue is empty!");
@@ -182,8 +258,8 @@ T& Queue<T, Allocator, C_SIZE>::back()
         return chunks[numOfChunks-1][idxInBackChunk-1];
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::push(const value_type& value)
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::push(const value_type& value)
 {
     if(isNewChunkNeeded() == true)
     {
@@ -201,8 +277,8 @@ void Queue<T, Allocator, C_SIZE>::push(const value_type& value)
     ++idxInBackChunk;
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::push(value_type&& value)
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::push(value_type&& value)
 {
     if(isNewChunkNeeded() == true)
     {
@@ -220,8 +296,8 @@ void Queue<T, Allocator, C_SIZE>::push(value_type&& value)
     ++idxInBackChunk;
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::pop()
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::pop()
 {
     if(0 == sz) // Nothing to pop
         return;
@@ -239,8 +315,8 @@ void Queue<T, Allocator, C_SIZE>::pop()
     }
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::swap(Queue& x) noexcept
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::swap(Queue& x) noexcept
 {
     // Swap all members
     std::swap(sz,               x.sz                );
@@ -251,8 +327,8 @@ void Queue<T, Allocator, C_SIZE>::swap(Queue& x) noexcept
     std::swap(allocator,        x.allocator         );
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::createNewChunk()
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::createNewChunk()
 {
     // Check the status of container
     // This function should only be called when there is need for a new chunk
@@ -266,7 +342,7 @@ void Queue<T, Allocator, C_SIZE>::createNewChunk()
     value_type** newChunks = new value_type*[numOfChunks + 1];
 
     if((nullptr == newChunks) || (nullptr == newChunk))
-        throw std::logic_error("Cannot allocate space for the new chunk!");
+        throw std::runtime_error("Cannot allocate space for the new chunk!");
 
     // Move the current chunk pointers
     if(0 < numOfChunks)
@@ -291,8 +367,8 @@ void Queue<T, Allocator, C_SIZE>::createNewChunk()
     idxInBackChunk = 0;
 }
 
-template<class T, class Allocator, std::size_t C_SIZE>
-void Queue<T, Allocator, C_SIZE>::removeFrontChunk()
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::removeFrontChunk()
 {
     if(isFrontChunkConsumed() == false)
         throw std::logic_error("Front chunks is not consumed yet!");
@@ -327,21 +403,3 @@ void Queue<T, Allocator, C_SIZE>::removeFrontChunk()
 
     idxInFrontChunk = 0;    // Reset front index
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

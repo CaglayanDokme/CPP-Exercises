@@ -6,6 +6,7 @@
  *              July 8, 2021  -> Copy and move constructors added.
  *              July 9, 2021  -> Doxygen added.
  *              July 23, 2021 -> Helper functions enhanced.
+ *                            -> Comparison operators implemented.
  * @note        Feel free to contact for questions, bugs or any other thing.
  * @copyright   No copyright.
  */
@@ -75,6 +76,10 @@ public:
     NODISCARD bool        empty() const { return (0 == sz); }
     NODISCARD size_type   size()  const { return sz;        }
 
+    /*** Operators ***/
+    NODISCARD bool operator==(const Queue& rightQ) const;
+    NODISCARD bool operator!=(const Queue& rightQ) const;
+
 private:
     /*** Members ***/
     size_type       sz;              // General size
@@ -85,6 +90,8 @@ private:
     Allocator       allocator;       // Allocator policy
 
     /*** Helper Functions ***/
+    NODISCARD const value_type* backChunk()  const;
+    NODISCARD const value_type* frontChunk() const;
     NODISCARD value_type* backChunk();
     NODISCARD value_type* frontChunk();
     NODISCARD bool isFrontChunkConsumed() const { return (C_SIZE == idxInFrontChunk); }
@@ -375,6 +382,71 @@ void Queue<T, C_SIZE, Allocator>::swap(Queue& swapQ) noexcept
     std::swap(allocator,        swapQ.allocator      );
 }
 
+/**
+ * @brief   Comparison operator
+ * @param   rightQ Queue that appears on the right side of the operator.
+ * @return  true    If both Queue's are equal.
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+NODISCARD bool Queue<T, C_SIZE, Allocator>::operator==(const Queue& rightQ) const
+{
+    if(rightQ.sz != sz)
+        return false;
+
+    size_type chunkIdxRight    = 0;
+    size_type chunkIdxLeft     = 0;
+    size_type idxRight  = rightQ.idxInFrontChunk;
+    size_type idxLeft   = idxInFrontChunk;
+
+    for(size_type compCounter = 0; compCounter < sz; ++compCounter)
+    {
+        if(chunks[chunkIdxLeft][idxLeft++] != rightQ.chunks[chunkIdxRight][idxRight++])
+            return false;
+
+        if(C_SIZE == idxLeft)
+        {
+            idxLeft = 0;    // Reset element index
+            ++chunkIdxLeft; // Increment left chunk index
+        }
+
+        if(C_SIZE == idxRight)
+        {
+            idxRight = 0;    // Reset element indexs
+            ++chunkIdxRight; // Increment left chunk index
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief   Inequality operator
+ * @param   rightQ  Queue that appears on the right side of the operator.
+ * @return  true    If Queue's are not equal
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+NODISCARD bool Queue<T, C_SIZE, Allocator>::operator!=(const Queue& rightQ) const
+{
+    return !(*this == rightQ);
+}
+
+/**
+ * @brief   Helper method for accessing back chunk of the queue
+ * @return  Const lValue reference to the back chunk of the queue.
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+NODISCARD const T* Queue<T, C_SIZE, Allocator>::backChunk() const
+{
+    if(0 == numOfChunks)
+        throw;
+
+    return chunks[numOfChunks-1];
+}
+
+/**
+ * @brief   Helper method for accessing back chunk of the queue
+ * @return  lValue reference to the back chunk of the queue.
+ */
 template<class T, std::size_t C_SIZE, class Allocator>
 NODISCARD T* Queue<T, C_SIZE, Allocator>::backChunk()
 {
@@ -384,6 +456,23 @@ NODISCARD T* Queue<T, C_SIZE, Allocator>::backChunk()
     return chunks[numOfChunks-1];
 }
 
+/**
+ * @brief   Helper method for accessing front chunk of the queue
+ * @return  Const lValue reference to the front chunk of the queue.
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+NODISCARD const T* Queue<T, C_SIZE, Allocator>::frontChunk() const
+{
+    if(0 == numOfChunks)
+        throw;
+
+    return chunks[0];
+}
+
+/**
+ * @brief   Helper method for accessing front chunk of the queue
+ * @return  lValue reference to the front chunk of the queue.
+ */
 template<class T, std::size_t C_SIZE, class Allocator>
 NODISCARD T* Queue<T, C_SIZE, Allocator>::frontChunk()
 {

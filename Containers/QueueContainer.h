@@ -2,11 +2,13 @@
  * @file        QueueContainer.h
  * @details     A template queue container class
  * @author      Caglayan DOKME, caglayandokme@gmail.com
- * @date        July 6, 2021  -> First release
- *              July 8, 2021  -> Copy and move constructors added.
- *              July 9, 2021  -> Doxygen added.
- *              July 23, 2021 -> Helper functions enhanced.
- *                            -> Comparison operators implemented.
+ * @date        July 6, 2021        -> First release
+ *              July 8, 2021        -> Copy and move constructors added.
+ *              July 9, 2021        -> Doxygen added.
+ *              July 23, 2021       -> Helper functions enhanced.
+ *                                  -> Comparison operators implemented.
+ *              September 19, 2021  -> Assignment operator implemented.
+ *                                  -> flush() method added.
  * @note        Feel free to contact for questions, bugs or any other thing.
  * @copyright   No copyright.
  */
@@ -71,12 +73,14 @@ public:
     void push(value_type&& value);
     void pop();
     void swap(Queue& swapQ) noexcept;
+    void flush();
 
     /*** Status Checkers ***/
     NODISCARD bool        empty() const { return (0 == sz); }
     NODISCARD size_type   size()  const { return sz;        }
 
     /*** Operators ***/
+    Queue& operator=(const Queue& rightQ);
     NODISCARD bool operator==(const Queue& rightQ) const;
     NODISCARD bool operator!=(const Queue& rightQ) const;
 
@@ -380,6 +384,69 @@ void Queue<T, C_SIZE, Allocator>::swap(Queue& swapQ) noexcept
     std::swap(numOfChunks,      swapQ.numOfChunks    );
     std::swap(chunks,           swapQ.chunks         );
     std::swap(allocator,        swapQ.allocator      );
+}
+
+/**
+ * @brief Flushes the content of the Queue
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+void Queue<T, C_SIZE, Allocator>::flush()
+{
+    while(!empty())
+        pop();
+}
+
+/**
+ * @brief   Assignment operator
+ * @param   rightQ The Queue that appears on the right side of the operator
+ * @return  lvalue reference to support cascaded calls
+ */
+template<class T, std::size_t C_SIZE, class Allocator>
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::operator=(const Queue& rightQ)
+{
+    // Pop all the elements first
+    flush();
+
+    // Prepare source indexes
+    size_type chunkIdxRight = 0;
+    size_type idxRight      = rightQ.idxInFrontChunk;
+
+
+    if(0 == rightQ.numOfChunks)     // No data in the right Queue
+    {
+        return *this;
+    }
+    else if(1 == rightQ.numOfChunks)
+    {
+        // Traverse the single chunk of right Queue
+        for( ; idxRight < rightQ.idxInBackChunk; ++idxRight)
+            push(rightQ.frontChunk()[idxRight]);
+
+        return *this;
+    }
+    else
+    {
+        // Traverse each chunk of the right Queue
+        for( ; chunkIdxRight < rightQ.numOfChunks; ++chunkIdxRight)
+        {
+            // If the current chunk is not the last one, traverse each element
+            if(chunkIdxRight != (rightQ.numOfChunks - 2))
+            {
+                for( ; idxRight < C_SIZE; ++idxRight)
+                    push(rightQ.chunks[chunkIdxRight][idxRight]);
+            }
+            else    // If the current chunk is the last one, traverse until the last element
+            {
+                for( ; idxRight < rightQ.idxInBackChunk; ++idxRight)
+                    push(rightQ.chunks[chunkIdxRight][idxRight]);
+            }
+
+            idxRight = 0;
+        }
+
+        // Index adjustments made in push(..) method
+        return *this;
+    }
 }
 
 /**

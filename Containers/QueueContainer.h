@@ -9,6 +9,12 @@
  *                                  -> Comparison operators implemented.
  *              September 19, 2021  -> Assignment operator implemented.
  *                                  -> flush() method added.
+ *              October 2, 2021     -> [[no_unique_address]] attribute added for allocator members.
+ *                                  -> Using directives enhanced.
+ *                                  -> A new allocator created for chunk pointers by rebinding the data allocator.
+ *                                  -> Constructors simplified using the default member initialization.
+ *                                  -> select_on_container_copy_construction(..) added to copy constructor.
+ *                                  -> lvalue return type added to modifier functions to supoort cascaded calls.
  * @note        Feel free to contact for questions, bugs or any other thing.
  * @copyright   No copyright.
  */
@@ -26,9 +32,14 @@
 // If the C++ version is greater or equal to 2017xx
 #if __cplusplus >= 201703l
 #define NODISCARD [[nodiscard]]
+#if __cplusplus >= 202002L
+#define NO_UNIQUE_ADDR [[no_unique_address]]
+#else
+#define NO_UNIQUE_ADDR
+#endif  // C++20 check
 #else
 #define NODISCARD
-#endif
+#endif  // C++17 check
 
 /*** Container Class ***/
 template<class T, std::size_t C_SIZE = 128, class Allocator = std::allocator<T>>
@@ -40,13 +51,16 @@ public:
     using const_reference   = const T&;
     using iterator          = T*;
     using const_iterator    = const T*;
-    using difference_type   = std::ptrdiff_t;
-    using size_type         = std::size_t;
+    using pointer           = typename std::allocator_traits<Allocator>::pointer;
+    using const_pointer     = typename std::allocator_traits<Allocator>::const_pointer;
+    using difference_type   = typename std::allocator_traits<Allocator>::difference_type;
+    using size_type         = typename std::allocator_traits<Allocator>::size_type;
     using allocator_type    = Allocator;
+    using ch_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<pointer>;
 
     /*** Constructors and Destructor ***/
     // Default constructor
-    Queue();
+    Queue() = default;
 
     // Allocator Constructor
     explicit Queue(const Allocator& alloc);
@@ -55,7 +69,7 @@ public:
     Queue(const Queue& copyQ);
 
     // Move Constructor
-    Queue(Queue&& moveQ);
+    Queue(Queue&& moveQ) noexcept;
 
     // Destructor
     ~Queue();
@@ -68,12 +82,12 @@ public:
 
     /*** Modifiers ***/
     template <class... Args>
-    void emplace(Args&&... args);
-    void push(const value_type& value);
-    void push(value_type&& value);
-    void pop();
-    void swap(Queue& swapQ) noexcept;
-    void flush();
+    Queue& emplace(Args&&... args);
+    Queue& push(const value_type& value);
+    Queue& push(value_type&& value);
+    Queue& pop();
+    Queue& swap(Queue& swapQ) noexcept;
+    Queue& flush();
 
     /*** Status Checkers ***/
     NODISCARD bool        empty() const { return (0 == sz); }
@@ -86,31 +100,24 @@ public:
 
 private:
     /*** Members ***/
-    size_type       sz;              // General size
-    size_type       idxInFrontChunk; // Front index in the front chunk (index of the oldest element)
-    size_type       idxInBackChunk;  // Back index in the back chunk (index 'after' the last added element)
-    size_type       numOfChunks;     // Number of chunks (0 is the front)
-    value_type**    chunks;          // Pointers of discrete chunks
-    Allocator       allocator;       // Allocator policy
+    size_type       sz              = 0;    // General size
+    size_type       frontIdx        = 0;    // Front index in the front chunk (index of the oldest element)
+    size_type       nextBackIdx     = 0;    // Back index in the back chunk (index 'after' the last added element)
+    size_type       numOfChunks     = 0;    // Number of chunks (0 is the front)
+    pointer*        chunks          = nullptr;          // Pointers of discrete chunks
+    NO_UNIQUE_ADDR  Allocator           allocator;      // Allocator policy for storing the data
+    NO_UNIQUE_ADDR  ch_allocator_type   chAllocator;    // Rebinded allocator policy for storing pointers
 
     /*** Helper Functions ***/
-    NODISCARD const value_type* backChunk()  const;
-    NODISCARD const value_type* frontChunk() const;
-    NODISCARD value_type* backChunk();
-    NODISCARD value_type* frontChunk();
-    NODISCARD bool isFrontChunkConsumed() const { return (C_SIZE == idxInFrontChunk); }
-    NODISCARD bool isNewChunkNeeded()     const { return ((C_SIZE == idxInBackChunk) || (0 == numOfChunks)); }
+    NODISCARD const_pointer backChunk()  const;
+    NODISCARD const_pointer frontChunk() const;
+    NODISCARD pointer backChunk();
+    NODISCARD pointer frontChunk();
+    NODISCARD bool isFrontChunkConsumed() const { return (C_SIZE == frontIdx); }
+    NODISCARD bool isNewChunkNeeded()     const { return ((C_SIZE == nextBackIdx) || (0 == numOfChunks)); }
     void createNewChunk();
     void removeFrontChunk();
 };
-
-/**
- * @brief Default constructor
- */
-template<class T, std::size_t C_SIZE, class Allocator>
-Queue<T, C_SIZE, Allocator>::Queue()
-    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr)
-{ /* No operation */ }
 
 /**
  * @brief Allocator constructor
@@ -118,7 +125,7 @@ Queue<T, C_SIZE, Allocator>::Queue()
  */
 template<class T, std::size_t C_SIZE, class Allocator>
 Queue<T, C_SIZE, Allocator>::Queue(const Allocator& alloc)
-    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(alloc)
+    : allocator(std::allocator_traits<allocator_type>::select_on_container_copy_construction(alloc))
 { /* No operation */ }
 
 /**
@@ -129,7 +136,7 @@ Queue<T, C_SIZE, Allocator>::Queue(const Allocator& alloc)
  */
 template<class T, std::size_t C_SIZE, class Allocator>
 Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
-    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(copyQ.allocator)
+    : allocator(std::allocator_traits<allocator_type>::select_on_container_copy_construction(copyQ.allocator))
 {
     // Check if the source Queue is empty
     if(!copyQ.empty())
@@ -139,7 +146,7 @@ Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
 
         // Allocate space for chunk pointers
         numOfChunks = ((copyQ.sz-1) / C_SIZE) + 1;
-        chunks      = new value_type*[numOfChunks];
+        chunks      = std::allocator_traits<ch_allocator_type>::allocate(chAllocator, numOfChunks);
 
         if(nullptr == chunks)
             throw std::runtime_error("Cannot allocate chunks array!");
@@ -155,7 +162,7 @@ Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
 
         // Copy construct objects
         size_type sourceChunk = 0, destChunk = 0;
-        size_type sourceElemIdx = copyQ.idxInFrontChunk, destElemIdx = 0;
+        size_type sourceElemIdx = copyQ.frontIdx, destElemIdx = 0;
         for( ; sz < copyQ.sz; ++sz)
         {
             std::allocator_traits<Allocator>::construct(allocator, chunks[destChunk] + destElemIdx++, copyQ.chunks[sourceChunk][sourceElemIdx++]);
@@ -174,8 +181,8 @@ Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
         }
 
         // Adjust indexes
-        idxInBackChunk  = destElemIdx;
-        idxInFrontChunk = 0;
+        nextBackIdx     = destElemIdx;
+        frontIdx        = 0;
     }
 }
 
@@ -184,8 +191,8 @@ Queue<T, C_SIZE, Allocator>::Queue(const Queue& copyQ)
  * @param moveQ     Source queue for stealing resources
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-Queue<T, C_SIZE, Allocator>::Queue(Queue&& moveQ)
-    : sz(0), idxInFrontChunk(0), idxInBackChunk(0), numOfChunks(0), chunks(nullptr), allocator(moveQ.allocator)
+Queue<T, C_SIZE, Allocator>::Queue(Queue&& moveQ) noexcept
+    : allocator(std::move(moveQ.allocator))
 {
     // Swap all members
     swap(moveQ);
@@ -202,14 +209,14 @@ Queue<T, C_SIZE, Allocator>::~Queue()
         if(1 == numOfChunks)    // Is front chunk and back chunk is the same?
         {
             // Destroy each element at that single chunk
-            for(size_type idx = idxInFrontChunk; idx < idxInBackChunk; ++idx)
+            for(size_type idx = frontIdx; idx < nextBackIdx; ++idx)
                 std::allocator_traits<Allocator>::destroy(allocator, frontChunk() + idx);
         }
         else if(1 < numOfChunks)
         {
             // Destroy each element at the front chunk
-            for(; idxInFrontChunk < C_SIZE; ++idxInFrontChunk)  // Traverse elements
-                std::allocator_traits<Allocator>::destroy(allocator, frontChunk() + idxInFrontChunk);
+            for(; frontIdx < C_SIZE; ++frontIdx)  // Traverse elements
+                std::allocator_traits<Allocator>::destroy(allocator, frontChunk() + frontIdx);
 
             // Destroy all elements of other chunks except the back one
             for(size_type chunkIdx = 1; chunkIdx < (numOfChunks - 2); ++chunkIdx)    // Traverse chunks
@@ -219,7 +226,7 @@ Queue<T, C_SIZE, Allocator>::~Queue()
             }
 
             // Destroy each element at back chunk
-            for(size_type elemIdx = 0; elemIdx < idxInBackChunk; ++elemIdx)   // Traverse elements
+            for(size_type elemIdx = 0; elemIdx < nextBackIdx; ++elemIdx)   // Traverse elements
                 std::allocator_traits<Allocator>::destroy(allocator, backChunk() + elemIdx);
         }
 
@@ -229,7 +236,7 @@ Queue<T, C_SIZE, Allocator>::~Queue()
     }
 
     // Destroy chunk pointer array
-    delete [] chunks;
+    std::allocator_traits<ch_allocator_type>::deallocate(chAllocator, chunks, numOfChunks);
 }
 
 /**
@@ -243,7 +250,7 @@ const T& Queue<T, C_SIZE, Allocator>::front() const
     if(empty())
         throw std::logic_error("Queue is empty!");
 
-    return frontChunk()[idxInFrontChunk];
+    return frontChunk()[frontIdx];
 }
 
 /**
@@ -257,7 +264,7 @@ T& Queue<T, C_SIZE, Allocator>::front()
     if(empty())
         throw std::logic_error("Queue is empty!");
 
-    return frontChunk()[idxInFrontChunk];
+    return frontChunk()[frontIdx];
 }
 
 /**
@@ -271,7 +278,7 @@ const T& Queue<T, C_SIZE, Allocator>::back() const
     if(empty())
         throw std::logic_error("Queue is empty!");
 
-    return backChunk()[idxInBackChunk-1];
+    return backChunk()[nextBackIdx-1];
 }
 
 /**
@@ -285,121 +292,134 @@ T& Queue<T, C_SIZE, Allocator>::back()
     if(empty())
         throw std::logic_error("Queue is empty!");
 
-    return backChunk()[idxInBackChunk-1];
+    return backChunk()[nextBackIdx-1];
 }
 
 /**
  * @brief   Pushes the element by constructing it in-place with the given arguments
  * @param   args  Arguments to be forwarded to the constructor of the new element
+ * @return  lvalue reference to support cascaded calls
  * @throws  std::logic_error    If the source queue was in an inconsistent state.
  */
 template<class T, std::size_t C_SIZE, class Allocator>
 template <class... Args>
-void Queue<T, C_SIZE, Allocator>::emplace(Args&&... args)
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::emplace(Args&&... args)
 {
-    if(isNewChunkNeeded() == true)
-    {
+    if(isNewChunkNeeded())
         createNewChunk();
-    }
 
-    if((0 == numOfChunks) || (nullptr == chunks) || (C_SIZE == idxInBackChunk))
+    if((0 == numOfChunks) || (nullptr == chunks) || (C_SIZE == nextBackIdx))
         throw std::logic_error("Chunks are corrupted!");
 
     // Copy construct the new element at the back
-    std::allocator_traits<Allocator>::construct(allocator, backChunk() + idxInBackChunk, std::forward<Args>(args)...);
+    std::allocator_traits<Allocator>::construct(allocator, backChunk() + nextBackIdx, std::forward<Args>(args)...);
 
     // Adjust size variables
     ++sz;
-    ++idxInBackChunk;
+    ++nextBackIdx;
+
+    return *this;
 }
 
 /**
  * @brief   Pushes the element to the Queue
  * @param   value Constant lValue reference to the object to be pushed
+ * @return  lvalue reference to support cascaded calls
  * @throws  std::logic_error    If the Queue was in an inconsistent state
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-void Queue<T, C_SIZE, Allocator>::push(const value_type& value)
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::push(const value_type& value)
 {
     if(isNewChunkNeeded())
-    {
         createNewChunk();
-    }
 
-    if((0 == numOfChunks) || (nullptr == chunks) || (C_SIZE == idxInBackChunk))
+    if((0 == numOfChunks) || (nullptr == chunks) || (C_SIZE == nextBackIdx))
         throw std::logic_error("Chunks are corrupted!");
 
     // Copy construct the new element at the back
-    std::allocator_traits<Allocator>::construct(allocator, backChunk() + idxInBackChunk, value);
+    std::allocator_traits<Allocator>::construct(allocator, backChunk() + nextBackIdx, value);
 
     // Adjust size variables
     ++sz;
-    ++idxInBackChunk;
+    ++nextBackIdx;
+
+    return *this;
 }
 
 /**
  * @brief   Pushes the element to the Queue
  * @param   value rValue reference to the object to be pushed
+ * @return  lvalue reference to support cascaded calls
  * @throws  std::logic_error    If the Queue was in an inconsistent state
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-void Queue<T, C_SIZE, Allocator>::push(value_type&& value)
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::push(value_type&& value)
 {
     return emplace(std::move(value));
 }
 
 /**
  * @brief Pops the front element of the Queue
+ * @return  lvalue reference to support cascaded calls
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-void Queue<T, C_SIZE, Allocator>::pop()
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::pop()
 {
     if(empty()) // Nothing to pop
-        return;
+        return *this;
 
     // Destroy the front element
-    std::allocator_traits<Allocator>::destroy(allocator, frontChunk() + idxInFrontChunk);
+    std::allocator_traits<Allocator>::destroy(allocator, frontChunk() + frontIdx);
 
     // Adjust size variables
-    ++idxInFrontChunk;
+    ++frontIdx;
     --sz;
 
     if(isFrontChunkConsumed())
     {
         removeFrontChunk();
     }
+
+    return *this;
 }
 
 /**
  * @brief Swaps the content of two Queues
  * @param swapQ     Queue to be swapped with
+ * @return  lvalue reference to support cascaded calls
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-void Queue<T, C_SIZE, Allocator>::swap(Queue& swapQ) noexcept
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::swap(Queue& swapQ) noexcept
 {
     // Swap all members
     std::swap(sz,               swapQ.sz             );
-    std::swap(idxInBackChunk,   swapQ.idxInBackChunk );
-    std::swap(idxInFrontChunk,  swapQ.idxInFrontChunk);
+    std::swap(nextBackIdx,   swapQ.nextBackIdx );
+    std::swap(frontIdx,  swapQ.frontIdx);
     std::swap(numOfChunks,      swapQ.numOfChunks    );
     std::swap(chunks,           swapQ.chunks         );
     std::swap(allocator,        swapQ.allocator      );
+
+    return *this;
 }
 
 /**
  * @brief Flushes the content of the Queue
+ * @return  lvalue reference to support cascaded calls
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-void Queue<T, C_SIZE, Allocator>::flush()
+Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::flush()
 {
     while(!empty())
         pop();
+
+    return *this;
 }
 
 /**
  * @brief   Assignment operator
  * @param   rightQ The Queue that appears on the right side of the operator
  * @return  lvalue reference to support cascaded calls
+ * @throws  std::logic_error    When the source Queue is in an inconsistent state
  */
 template<class T, std::size_t C_SIZE, class Allocator>
 Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::operator=(const Queue& rightQ)
@@ -407,19 +427,25 @@ Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::operator=(const Queue&
     // Pop all the elements first
     flush();
 
+    // Replace the allocator if needed
+    if(allocator != rightQ.allocator)
+        allocator = rightQ.allocator;
+
     // Prepare source indexes
     size_type chunkIdxRight = 0;
-    size_type idxRight      = rightQ.idxInFrontChunk;
-
+    size_type idxRight      = rightQ.frontIdx;
 
     if(0 == rightQ.numOfChunks)     // No data in the right Queue
     {
+        if(rightQ.size() != 0)
+            throw std::logic_error("Source Queue was in an inconsistent state!");
+
         return *this;
     }
     else if(1 == rightQ.numOfChunks)
     {
         // Traverse the single chunk of right Queue
-        for( ; idxRight < rightQ.idxInBackChunk; ++idxRight)
+        for( ; idxRight < rightQ.nextBackIdx; ++idxRight)
             push(rightQ.frontChunk()[idxRight]);
 
         return *this;
@@ -437,7 +463,7 @@ Queue<T, C_SIZE, Allocator>& Queue<T, C_SIZE, Allocator>::operator=(const Queue&
             }
             else    // If the current chunk is the last one, traverse until the last element
             {
-                for( ; idxRight < rightQ.idxInBackChunk; ++idxRight)
+                for( ; idxRight < rightQ.nextBackIdx; ++idxRight)
                     push(rightQ.chunks[chunkIdxRight][idxRight]);
             }
 
@@ -462,8 +488,8 @@ NODISCARD bool Queue<T, C_SIZE, Allocator>::operator==(const Queue& rightQ) cons
 
     size_type chunkIdxRight    = 0;
     size_type chunkIdxLeft     = 0;
-    size_type idxRight  = rightQ.idxInFrontChunk;
-    size_type idxLeft   = idxInFrontChunk;
+    size_type idxRight  = rightQ.frontIdx;
+    size_type idxLeft   = frontIdx;
 
     for(size_type compCounter = 0; compCounter < sz; ++compCounter)
     {
@@ -502,7 +528,7 @@ NODISCARD bool Queue<T, C_SIZE, Allocator>::operator!=(const Queue& rightQ) cons
  * @return  Const lValue reference to the back chunk of the queue.
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-NODISCARD const T* Queue<T, C_SIZE, Allocator>::backChunk() const
+NODISCARD typename Queue<T, C_SIZE, Allocator>::const_pointer Queue<T, C_SIZE, Allocator>::backChunk() const
 {
     if(0 == numOfChunks)
         throw;
@@ -515,7 +541,7 @@ NODISCARD const T* Queue<T, C_SIZE, Allocator>::backChunk() const
  * @return  lValue reference to the back chunk of the queue.
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-NODISCARD T* Queue<T, C_SIZE, Allocator>::backChunk()
+NODISCARD typename Queue<T, C_SIZE, Allocator>::pointer Queue<T, C_SIZE, Allocator>::backChunk()
 {
     if(0 == numOfChunks)
         throw;
@@ -528,7 +554,7 @@ NODISCARD T* Queue<T, C_SIZE, Allocator>::backChunk()
  * @return  Const lValue reference to the front chunk of the queue.
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-NODISCARD const T* Queue<T, C_SIZE, Allocator>::frontChunk() const
+NODISCARD typename Queue<T, C_SIZE, Allocator>::const_pointer Queue<T, C_SIZE, Allocator>::frontChunk() const
 {
     if(0 == numOfChunks)
         throw;
@@ -541,7 +567,7 @@ NODISCARD const T* Queue<T, C_SIZE, Allocator>::frontChunk() const
  * @return  lValue reference to the front chunk of the queue.
  */
 template<class T, std::size_t C_SIZE, class Allocator>
-NODISCARD T* Queue<T, C_SIZE, Allocator>::frontChunk()
+NODISCARD typename Queue<T, C_SIZE, Allocator>::pointer Queue<T, C_SIZE, Allocator>::frontChunk()
 {
     if(0 == numOfChunks)
         throw;
@@ -563,10 +589,10 @@ void Queue<T, C_SIZE, Allocator>::createNewChunk()
         throw std::logic_error("Early call to chunk creator!");
 
     // Allocate space for the new chunk
-    value_type* newChunk = std::allocator_traits<Allocator>::allocate(allocator, C_SIZE);
+    pointer newChunk = std::allocator_traits<Allocator>::allocate(allocator, C_SIZE);
 
     // Allocate space for chunk pointers
-    value_type** newChunks = new value_type*[numOfChunks + 1];
+    pointer* newChunks = std::allocator_traits<ch_allocator_type>::allocate(chAllocator, numOfChunks+1);
 
     if((nullptr == newChunks) || (nullptr == newChunk))
         throw std::runtime_error("Cannot allocate space for the new chunk!");
@@ -577,10 +603,10 @@ void Queue<T, C_SIZE, Allocator>::createNewChunk()
         if(nullptr == chunks)
             throw std::logic_error("Chunks lost!");
 
-        std::memcpy(newChunks, chunks, numOfChunks * sizeof(value_type*));   // Copy pointers directly
+        std::memcpy(newChunks, chunks, numOfChunks * sizeof(pointer));   // Copy pointers directly
 
         // Deallocate old chunk array
-        delete [] chunks;
+        std::allocator_traits<ch_allocator_type>::deallocate(chAllocator, chunks, numOfChunks);
     }
 
     // Append the new chunk
@@ -591,7 +617,7 @@ void Queue<T, C_SIZE, Allocator>::createNewChunk()
 
     // Adjust current chunk variables
     ++numOfChunks;
-    idxInBackChunk = 0;
+    nextBackIdx = 0;
 }
 
 /**
@@ -610,11 +636,11 @@ void Queue<T, C_SIZE, Allocator>::removeFrontChunk()
     // No need to remove the chunk if there is only one left, just reset indexes
     if(1 == numOfChunks)
     {
-        if((C_SIZE != idxInBackChunk) || (C_SIZE != idxInFrontChunk) || (0 != sz))
+        if((C_SIZE != nextBackIdx) || (C_SIZE != frontIdx) || (0 != sz))
             throw std::logic_error("Indexes are corrupted!");
 
-        idxInFrontChunk = 0;
-        idxInBackChunk = 0;
+        frontIdx = 0;
+        nextBackIdx = 0;
 
         return;
     }
@@ -632,5 +658,5 @@ void Queue<T, C_SIZE, Allocator>::removeFrontChunk()
 
     --numOfChunks;  // Decrement the number of chunks
 
-    idxInFrontChunk = 0;    // Reset front index
+    frontIdx = 0;    // Reset front index
 }
